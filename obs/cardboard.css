@@ -234,6 +234,36 @@ body.obs-blue2 .frame .cam {
 }
 body.obs-blue2 { background: #0000ff !important; }
 
+/* ── Key mode (?key=1) ────────────────────────────────────────────
+   White graphic matte on black — feed into your switcher's KEY input
+   alongside the fill URL on your switcher's FILL input.
+   White = show fill, Black = show program video through. */
+body.key { background: #000000 !important; }
+
+body.key .cam-placeholder,
+body.key .res-chip { display: none !important; }
+
+/* Every graphic element → flat white (no gradients, shadows, or colour) */
+body.key .stage * {
+  background-color: #ffffff !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
+/* Cam windows → black (show-through on the key) */
+body.key .frame .cam,
+body.key .frame .cam * {
+  background-color: #000000 !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border-color: #000000 !important;
+  color: #000000 !important;
+}
+
 /* Title banner header bar */
 .title-banner {
   position: relative;

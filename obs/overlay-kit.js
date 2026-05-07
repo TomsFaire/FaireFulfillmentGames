@@ -230,7 +230,8 @@ window.TEAMS = [
     const p = new URLSearchParams(window.location.search);
     const obs = p.get('obs');
     const map = { '1': 'obs', 'true': 'obs', green: 'obs-green', green2: 'obs-green2', blue: 'obs-blue', blue2: 'obs-blue2' };
-    const cls = map[obs] || (p.get('preview') === '0' ? 'obs' : null);
+    let cls = map[obs] || (p.get('preview') === '0' ? 'obs' : null);
+    if (!cls && (p.get('key') === '1' || obs === 'key')) cls = 'key';
     if (cls) document.body.classList.add(cls);
   }
 

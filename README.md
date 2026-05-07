@@ -88,6 +88,7 @@ Replace `?obs=1` with any of the chroma-key flags below:
 | Flag | Cam windows | Page background | Use when |
 |---|---|---|---|
 | `?obs=1` | Transparent | Transparent | Compositing video in OBS |
+| `?key=1` | Black | Black | Hardware switcher — KEY input (pair with fill URL) |
 | `?obs=green` | `#00ff00` | Transparent | Hardware switcher — key cams only |
 | `?obs=green2` | `#00ff00` | `#00ff00` | Hardware switcher — full green field |
 | `?obs=blue` | `#0000ff` | Transparent | Hardware switcher — key cams only |
@@ -96,6 +97,24 @@ Replace `?obs=1` with any of the chroma-key flags below:
 All flags hide the design-time placeholders and resolution chips.
 
 The design-canvas page (`Faire Fulfillment Games Overlays.html`) has a **COPY** button per overlay that builds the absolute URL with `?obs=1` already appended — update the host to `localhost:3000` after copying.
+
+---
+
+## Key / Fill workflow (hardware switchers)
+
+Traditional downstream keying requires two separate video signals into your switcher:
+
+- **Fill** — the coloured graphic on a black background: `?obs=green2` or `?obs=blue2`
+- **Key** — a white-on-black luminance matte of the same layout: `?key=1`
+
+The switcher uses the key signal to cut a hole in program output and drops the fill into it. Both signals must come from the same layout URL so the geometry matches exactly.
+
+**Setup (two display outputs from one machine):**
+
+1. Output A → switcher FILL input: `http://localhost:3000/overlay-3-four-up.html?obs=green2`
+2. Output B → switcher KEY input:  `http://localhost:3000/overlay-3-four-up.html?key=1`
+
+In `?key=1` mode every graphic element (frames, banners, timer chip, order counters) renders as **solid white**; cam window areas and the page background are **solid black**. White = show fill, black = show program video through.
 
 ---
 
