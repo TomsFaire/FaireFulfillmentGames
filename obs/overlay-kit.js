@@ -33,6 +33,7 @@ window.TEAMS = [
       tape: null, corner: null,
       resLabel: 'CAM',
       placeholderLabel: 'CAM',
+      clipW: 0, clipH: 0,
     }, opts);
 
     const frame = el('div', {
@@ -42,6 +43,25 @@ window.TEAMS = [
         height: typeof o.height === 'number' ? o.height + 'px' : o.height,
       },
     });
+
+    // In transparent OBS mode, clip the frame to a picture-frame shape so
+    // the cam area is never rendered — the transparent body shows through.
+    if (document.body.classList.contains('obs')) {
+      const fw = typeof o.width  === 'number' ? o.width  : o.clipW;
+      const fh = typeof o.height === 'number' ? o.height : o.clipH;
+      if (fw && fh) {
+        const rx = 6; // matches .cardboard border-radius
+        const cL = o.side, cT = o.top, cR = fw - o.side, cB = fh - o.bottom;
+        const outer =
+          `M${rx},0 H${fw-rx} A${rx},${rx} 0 0 1 ${fw},${rx}` +
+          ` V${fh-rx} A${rx},${rx} 0 0 1 ${fw-rx},${fh}` +
+          ` H${rx} A${rx},${rx} 0 0 1 0,${fh-rx}` +
+          ` V${rx} A${rx},${rx} 0 0 1 ${rx},0 Z`;
+        const hole = `M${cR},${cT} H${cL} V${cB} H${cR} Z`;
+        frame.style.clipPath = `path('${outer} ${hole}')`;
+        frame.style.borderRadius = '0';
+      }
+    }
 
     // Corner creases
     ['tl','tr','bl','br'].forEach(p => frame.appendChild(el('div', { cls: 'corner-crease ' + p })));

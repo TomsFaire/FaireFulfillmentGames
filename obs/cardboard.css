@@ -190,18 +190,13 @@ html, body {
 }
 .cam-placeholder .sub { opacity: 0.7; font-size: 9px; }
 
-/* OBS mode: hide design previews, punch true alpha-0 holes through the
-   cardboard frame so OBS (and any compositor) can composite through.
-   isolation:isolate creates a stacking context on the frame; destination-out
-   on the cam zeroes the alpha of those pixels within that context. */
+/* OBS mode: hide design previews. clip-path on .frame (applied via JS in
+   makeFrame) punches the cam area out of the cardboard so the transparent
+   body shows through — giving OBS true alpha=0 pixels to composite through. */
 body.obs .cam-placeholder,
 body.obs .res-chip { display: none !important; }
-body.obs .frame {
-  isolation: isolate;
-}
 body.obs .frame .cam {
-  mix-blend-mode: destination-out;
-  background: white !important;
+  background: transparent !important;
   box-shadow: none !important;
 }
 
