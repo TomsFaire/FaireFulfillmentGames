@@ -56,18 +56,15 @@ function broadcast(msg) {
 }
 
 // ── Stagetimer proxy helper ───────────────────────────────────
+// Stagetimer control API uses GET: /v1/{action}?room_id=...&api_key=...
 function stagetimerPost(action, callback) {
-  const { STAGETIMER_ROOM_ID, STAGETIMER_TIMER_ID, STAGETIMER_API_KEY } = ENV;
-  if (!STAGETIMER_ROOM_ID || !STAGETIMER_TIMER_ID || !STAGETIMER_API_KEY) {
+  const { STAGETIMER_ROOM_ID, STAGETIMER_API_KEY } = ENV;
+  if (!STAGETIMER_ROOM_ID || !STAGETIMER_API_KEY) {
     return callback(new Error('timer not configured'));
   }
-  // ⚠ Verify exact endpoint path against https://stagetimer.io/docs/api/ before the show.
-  // The pattern below follows the documented v1 REST API; adjust if paths differ.
-  const stPath = `/v1/rooms/${STAGETIMER_ROOM_ID}/timers/${STAGETIMER_TIMER_ID}/${action}` +
-                 `?api_key=${encodeURIComponent(STAGETIMER_API_KEY)}`;
+  const stPath = `/v1/${action}?room_id=${encodeURIComponent(STAGETIMER_ROOM_ID)}&api_key=${encodeURIComponent(STAGETIMER_API_KEY)}`;
   const req = https.request(
-    { hostname: 'api.stagetimer.io', path: stPath, method: 'POST',
-      headers: { 'Content-Length': '0', 'Content-Type': 'application/json' } },
+    { hostname: 'api.stagetimer.io', path: stPath, method: 'GET' },
     (res) => {
       let body = '';
       res.on('data', d => (body += d));
