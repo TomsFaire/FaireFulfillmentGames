@@ -123,7 +123,9 @@
   ];
 
   // ── State ──────────────────────────────────────────────────
-  let state = JSON.parse(localStorage.getItem('ffg.orders') || 'null') || [0, 0, 0, 0];
+  let state;
+  try { state = JSON.parse(localStorage.getItem('ffg.orders')); } catch {}
+  if (!Array.isArray(state) || state.length !== 4) state = [0, 0, 0, 0];
   let maxOrders = +(localStorage.getItem('ffg.max') || 10);
 
   // ── BroadcastChannel (same-machine fallback) ───────────────
@@ -220,7 +222,7 @@
   // ── Timer controls ─────────────────────────────────────────
   function timerAction(action) {
     const msgEl = document.getElementById('timer-msg');
-    msgEl.textContent = action + 'ing…';
+    msgEl.textContent = action === 'reset' ? 'resetting…' : action + 'ing…';
     fetch('/api/timer/' + action, { method: 'POST' })
       .then(r => r.json())
       .then(d => { msgEl.textContent = d.ok ? '' : ('Error: ' + (d.error || 'unknown')); })
@@ -240,12 +242,12 @@
   updateStatus();
 
   if (IS_SERVED) {
-    // Warm up relay status
-    fetch('/api/events').then(r => { relayOk = r.ok; updateStatus(); }).catch(() => {});
-    // Show timer section if credentials are configured
+    // Single init fetch: detect relay availability + check timer config
     fetch('/api/timer/config')
       .then(r => r.json())
       .then(cfg => {
+        relayOk = true;
+        updateStatus();
         const sec = document.getElementById('timer-section');
         sec.style.display = '';
         if (!cfg.configured) {
@@ -256,7 +258,7 @@
           sec.appendChild(msg);
         }
       })
-      .catch(() => { /* server not running — leave timer section hidden */ });
+      .catch(() => { /* server not running — leave status OFFLINE, timer hidden */ });
   }
 </script>
 </body>
