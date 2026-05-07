@@ -79,6 +79,7 @@ For each overlay add a **Browser Source** in OBS:
 | Overlay | Description | URL |
 |---|---|---|
 | Overlay 1 | Wide cam + POV PiP | `http://localhost:3000/overlay-1-single-pip.html?obs=1` |
+| Overlay 1b | Wide cam only (no PiP) | `http://localhost:3000/overlay-1-wide-only.html?obs=1` |
 | Overlay 2 | Title / four portraits | `http://localhost:3000/overlay-2-four-portrait.html?obs=1` |
 | Overlay 3 | Live four-up + order counters | `http://localhost:3000/overlay-3-four-up.html?obs=1` |
 
