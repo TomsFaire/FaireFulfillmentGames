@@ -74,6 +74,7 @@
       const chip = makeTimerChip('SHIP-BY');
       top.appendChild(chip);
       Stagetimer.bind(chip);
+      Stagetimer.initFromServer();
 
       // Stamp
       top.appendChild(makeStamp('ground', 4, 'sm'));

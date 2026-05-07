@@ -111,7 +111,13 @@ const server = http.createServer((req, res) => {
   // ── Timer config ─────────────────────────────────────────────
   if (req.method === 'GET' && url.pathname === '/api/timer/config') {
     const configured = !!(ENV.STAGETIMER_ROOM_ID && ENV.STAGETIMER_TIMER_ID && ENV.STAGETIMER_API_KEY);
-    return json(res, 200, { ok: true, configured, state: state.slice(), max: maxOrders });
+    return json(res, 200, {
+      ok: true, configured,
+      roomId: ENV.STAGETIMER_ROOM_ID  || '',
+      apiKey: ENV.STAGETIMER_API_KEY  || '',
+      timerId: ENV.STAGETIMER_TIMER_ID || '',
+      state: state.slice(), max: maxOrders,
+    });
   }
 
   // ── Timer proxy ──────────────────────────────────────────────
