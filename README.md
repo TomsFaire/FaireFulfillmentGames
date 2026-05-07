@@ -74,16 +74,27 @@ For each overlay add a **Browser Source** in OBS:
 | Shutdown source when not visible | **Unchecked** (so the timer keeps polling) |
 | Refresh browser when scene becomes active | Optional |
 
-Two URL flags control the cam-window rendering:
+### All layout URLs
 
-| Flag | Cam windows | Use when |
+| Overlay | Description | URL |
 |---|---|---|
-| `?obs=1` | Transparent | Compositing in OBS (video fills through) |
-| `?obs=green` | Chroma-key green (#00ff00) | Keying in a hardware switcher |
+| Overlay 1 | Wide cam + POV PiP | `http://localhost:3000/overlay-1-single-pip.html?obs=1` |
+| Overlay 2 | Title / four portraits | `http://localhost:3000/overlay-2-four-portrait.html?obs=1` |
+| Overlay 3 | Live four-up + order counters | `http://localhost:3000/overlay-3-four-up.html?obs=1` |
 
-Both flags hide the design-time placeholders and resolution chips.
+Replace `?obs=1` with any of the chroma-key flags below:
 
-The design-canvas page (`Faire Fulfillment Games Overlays.html`) has a **COPY** button per overlay that builds the absolute URL with `?obs=1` already appended — update the host to `localhost:3000` after copying, and swap to `?obs=green` if you're routing through a hardware switcher.
+| Flag | Cam windows | Page background | Use when |
+|---|---|---|---|
+| `?obs=1` | Transparent | Transparent | Compositing video in OBS |
+| `?obs=green` | `#00ff00` | Transparent | Hardware switcher — key cams only |
+| `?obs=green2` | `#00ff00` | `#00ff00` | Hardware switcher — full green field |
+| `?obs=blue` | `#0000ff` | Transparent | Hardware switcher — key cams only |
+| `?obs=blue2` | `#0000ff` | `#0000ff` | Hardware switcher — full blue field |
+
+All flags hide the design-time placeholders and resolution chips.
+
+The design-canvas page (`Faire Fulfillment Games Overlays.html`) has a **COPY** button per overlay that builds the absolute URL with `?obs=1` already appended — update the host to `localhost:3000` after copying.
 
 ---
 
