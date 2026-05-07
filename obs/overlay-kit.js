@@ -14,6 +14,11 @@ window.TEAMS = [
 (function () {
   'use strict';
 
+  // Computed once at script load, before any makeFrame() calls, so the check
+  // is reliable regardless of when applyObsMode() runs.
+  const IS_OBS = new URLSearchParams(window.location.search).get('obs') === '1' ||
+                 new URLSearchParams(window.location.search).get('obs') === 'true';
+
   function el(tag, opts = {}, children = []) {
     const n = document.createElement(tag);
     if (opts.cls)   n.className = opts.cls;
@@ -46,7 +51,7 @@ window.TEAMS = [
 
     // In transparent OBS mode, clip the frame to a picture-frame shape so
     // the cam area is never rendered — the transparent body shows through.
-    if (document.body.classList.contains('obs')) {
+    if (IS_OBS) {
       const fw = typeof o.width  === 'number' ? o.width  : o.clipW;
       const fh = typeof o.height === 'number' ? o.height : o.clipH;
       if (fw && fh) {
