@@ -103,7 +103,7 @@ The design-canvas page (`Faire Fulfillment Games Overlays.html`) has a **COPY** 
 
 The SHIP-BY clock at the top of overlays 1 and 3 binds to a [Stagetimer](https://stagetimer.io) room.
 
-Credentials live in `obs/.env` (never in the URL). The overlay fetches them from the relay server on load. Fill in `obs/.env` before starting `server.js`:
+Credentials live in `obs/.env` (never in the URL). The overlay fetches them from the relay server (`server.js`) on load — **the server must be running before OBS loads the overlay, or the clock falls back to local time-of-day**. Fill in `obs/.env` before starting `server.js`:
 
 ```
 STAGETIMER_ROOM_ID=abc123
@@ -212,7 +212,9 @@ Each overlay calls `makeTimerChip('SHIP-BY')` — change the string. Or change `
 
 **Cam window shows up as a dark rectangle in OBS.** You forgot `?obs=1` in the URL. Without it the page is in design-preview mode and the cam cutouts are filled.
 
-**Timer shows `--:--  OFFLINE`.** Stagetimer room ID or API key is missing/wrong in `obs/.env`. Make sure `server.js` is running and printed "Stagetimer: configured" on startup.
+**Timer shows the current time of day instead of a countdown.** `server.js` is not running. The overlay fetches Stagetimer credentials from `/api/timer/config` at load time — if the server is down, the fetch fails silently and the clock falls back to local time. Start the server (`bash obs/start.sh`) and then reload the browser source in OBS.
+
+**Timer shows `--:--  OFFLINE`.** The server is running but the Stagetimer room ID or API key in `obs/.env` is missing or incorrect. Check that `server.js` printed "Stagetimer: configured ✓" on startup.
 
 **Control panel status pill shows OFFLINE.** `server.js` isn't running, or the tablet is on a different network from the OBS machine. Start the server first, then reload the control page.
 
