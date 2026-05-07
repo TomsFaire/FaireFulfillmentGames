@@ -155,9 +155,9 @@
       } catch (e) {}
 
       // SSE relay from server.js (active when served via localhost:3000)
-      try {
+      if (location.protocol !== 'file:') try {
         const es = new EventSource('/api/events');
-        es.onmessage = (e) => applyMsg(JSON.parse(e.data));
+        es.onmessage = (e) => { try { applyMsg(JSON.parse(e.data)); } catch (e) {} };
       } catch (e) {}
 
       // Expose for in-page console / Companion "Browser Source → execute JS"

@@ -150,6 +150,7 @@ const server = http.createServer((req, res) => {
       if (action === 'reset') {
         state = [0, 0, 0, 0];
         broadcast({ type: 'ffg.orders', reset: true });
+        broadcast({ type: 'ffg.orders.state', state: state.slice(), max: maxOrders });
         return json(res, 200, { ok: true });
       }
 
