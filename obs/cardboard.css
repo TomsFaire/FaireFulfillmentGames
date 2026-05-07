@@ -199,14 +199,39 @@ body.obs .frame .cam {
   box-shadow: none !important;
 }
 
-/* Green-key mode: same as OBS mode but fills cam windows with chroma-key
-   green (#00ff00) so a hardware switcher can key them independently. */
+/* Green-key mode: cam windows → #00ff00, page background transparent. */
 body.obs-green .cam-placeholder,
 body.obs-green .res-chip { display: none !important; }
 body.obs-green .frame .cam {
   background: #00ff00 !important;
   box-shadow: none !important;
 }
+
+/* Green2: cam windows AND full page background → #00ff00. */
+body.obs-green2 .cam-placeholder,
+body.obs-green2 .res-chip { display: none !important; }
+body.obs-green2 .frame .cam {
+  background: #00ff00 !important;
+  box-shadow: none !important;
+}
+body.obs-green2 { background: #00ff00 !important; }
+
+/* Blue-key mode: cam windows → #0000ff, page background transparent. */
+body.obs-blue .cam-placeholder,
+body.obs-blue .res-chip { display: none !important; }
+body.obs-blue .frame .cam {
+  background: #0000ff !important;
+  box-shadow: none !important;
+}
+
+/* Blue2: cam windows AND full page background → #0000ff. */
+body.obs-blue2 .cam-placeholder,
+body.obs-blue2 .res-chip { display: none !important; }
+body.obs-blue2 .frame .cam {
+  background: #0000ff !important;
+  box-shadow: none !important;
+}
+body.obs-blue2 { background: #0000ff !important; }
 
 /* Title banner header bar */
 .title-banner {

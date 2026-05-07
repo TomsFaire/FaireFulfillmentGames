@@ -194,16 +194,17 @@ window.TEAMS = [
   }
 
   /* OBS mode toggle.
-     ?obs=1      → transparent cam windows (composite in OBS)
-     ?obs=green  → #00ff00 cam windows (key in hardware switcher) */
+     ?obs=1      → transparent cam windows + transparent bg (composite in OBS)
+     ?obs=green  → green (#00ff00) cam windows, transparent bg
+     ?obs=green2 → green cam windows + green bg (full green field)
+     ?obs=blue   → blue (#0000ff) cam windows, transparent bg
+     ?obs=blue2  → blue cam windows + blue bg (full blue field) */
   function applyObsMode() {
     const p = new URLSearchParams(window.location.search);
     const obs = p.get('obs');
-    if (obs === '1' || obs === 'true' || p.get('preview') === '0') {
-      document.body.classList.add('obs');
-    } else if (obs === 'green') {
-      document.body.classList.add('obs-green');
-    }
+    const map = { '1': 'obs', 'true': 'obs', green: 'obs-green', green2: 'obs-green2', blue: 'obs-blue', blue2: 'obs-blue2' };
+    const cls = map[obs] || (p.get('preview') === '0' ? 'obs' : null);
+    if (cls) document.body.classList.add(cls);
   }
 
   window.OverlayKit = {
