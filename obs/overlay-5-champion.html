@@ -122,10 +122,16 @@
       const KEYS = ['sf', 'kw', 'tor', 'nyc'];
       const params = new URLSearchParams(location.search);
       const winnerKey = (params.get('winner') || 'tor').toLowerCase();
-      const winner = TEAMS[Math.max(0, KEYS.indexOf(winnerKey))];
+      const winnerIdx = Math.max(0, KEYS.indexOf(winnerKey));
+      const winner = TEAMS[winnerIdx];
 
-      const max        = +(params.get('max')   ?? 10);
-      const finalScore = +(params.get('final') ?? max);
+      const max = +(params.get('max') ?? 10);
+
+      // Score state — same shared store as overlays 3 and 4
+      let state;
+      try { state = JSON.parse(localStorage.getItem('ffg.orders') || 'null'); } catch (e) {}
+      if (!state || state.length !== 4) state = [0, 0, 0, 0];
+      if (params.has('final')) state[winnerIdx] = +(params.get('final'));
 
       // ── Top kicker banner ──────────────────────────────────────────
       const top = el('div', { cls: 'champ-kicker paper' });
@@ -138,11 +144,45 @@
       const fs = el('div', { cls: 'final' });
       fs.appendChild(el('div', { cls: 'lbl', text: 'FINAL' }));
       const fsn = el('div', { cls: 'num' });
-      fsn.appendChild(el('b', { text: String(finalScore) }));
-      fsn.appendChild(el('span', { text: '/ ' + max }));
+      const scoreB = el('b', { text: String(state[winnerIdx]) });
+      const maxSpan = el('span', { text: '/ ' + max });
+      fsn.appendChild(scoreB);
+      fsn.appendChild(maxSpan);
       fs.appendChild(fsn);
       top.appendChild(fs);
       stage.appendChild(top);
+
+      function render() {
+        scoreB.textContent = String(Math.max(0, Math.min(max, state[winnerIdx])));
+        maxSpan.textContent = '/ ' + max;
+        try { localStorage.setItem('ffg.orders', JSON.stringify(state)); } catch (e) {}
+      }
+
+      function applyMsg(msg) {
+        if (!msg) return;
+        if (msg.type === 'ffg.orders.state') {
+          if (Array.isArray(msg.state) && msg.state.length === 4) state = msg.state.slice();
+          return render();
+        }
+        if (msg.type !== 'ffg.orders') return;
+        if (msg.reset) { state = [0, 0, 0, 0]; return render(); }
+        let i = -1;
+        if (typeof msg.team === 'number') i = msg.team;
+        else if (typeof msg.team === 'string') i = KEYS.indexOf(msg.team.toLowerCase());
+        if (i < 0 || i > 3) return;
+        if (typeof msg.value === 'number') state[i] = Math.max(0, Math.min(max, msg.value));
+        else if (typeof msg.delta === 'number') state[i] = Math.max(0, Math.min(max, state[i] + msg.delta));
+        render();
+      }
+      window.addEventListener('message', (e) => applyMsg(e.data));
+      try {
+        const bc = new BroadcastChannel('ffg-orders');
+        bc.onmessage = (e) => applyMsg(e.data);
+      } catch (e) {}
+      if (location.protocol !== 'file:') try {
+        const es = new EventSource('/api/events');
+        es.onmessage = (e) => { try { applyMsg(JSON.parse(e.data)); } catch (e) {} };
+      } catch (e) {}
 
       // ── Wide hero cam ──────────────────────────────────────────────
       const wideWrap = el('div', { style: { position: 'absolute', top: '160px', left: '80px' } });
