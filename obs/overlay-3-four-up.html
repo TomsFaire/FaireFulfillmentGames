@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>FFG Overlay 3 — Four-Up Live Grid</title>
+  <meta name="viewport" content="width=1920, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="cardboard.css" />
+  <style>
+    .ffg-top {
+      position: absolute; top: 16px; left: 24px; right: 24px;
+      height: 86px;
+      display: flex; align-items: center;
+      padding: 0 28px; gap: 20px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    }
+    .ffg-top .ttl {
+      font-family: var(--serif); font-size: 36px; line-height: 1;
+      color: var(--ink); font-weight: 500;
+    }
+    .ffg-top .sub {
+      margin-top: 4px;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.32em;
+      color: var(--ink); opacity: 0.55;
+    }
+    .grid {
+      position: absolute;
+      top: 124px; left: 36px; right: 36px; bottom: 70px;
+      display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 24px;
+    }
+    .grid .cell { position: relative; }
+    .order-chip {
+      position: absolute; top: 16px; right: 32px; z-index: 5;
+      background: var(--ink); color: var(--cream);
+      font-family: var(--mono); font-size: 11px;
+      padding: 4px 10px; border-radius: 3px;
+      letter-spacing: 0.15em; border: 1px solid var(--kraft-light);
+    }
+    .order-chip b { color: var(--kraft-light); font-weight: 700; }
+    .footer {
+      position: absolute; bottom: 16px; left: 36px; right: 36px;
+      height: 42px;
+      background: var(--ink); color: var(--cream);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 18px; border-radius: 3px;
+      font-size: 13px; letter-spacing: 0.25em; font-weight: 500;
+    }
+    .footer .right { display: flex; gap: 18px; align-items: center; }
+    .footer .url { color: var(--kraft-light); font-family: var(--serif); font-size: 16px; font-style: italic; letter-spacing: 0; }
+  </style>
+</head>
+<body>
+  <div class="stage" id="stage" data-screen-label="Overlay 3 — Four-Up Live"></div>
+
+  <script src="overlay-kit.js"></script>
+  <script src="stagetimer.js"></script>
+  <script>
+    (function () {
+      const { el, makeFrame, makeStamp, makeTimerChip, autoScale, applyObsMode } = window.OverlayKit;
+      const stage = document.getElementById('stage');
+      const TEAMS = window.TEAMS;
+
+      // Top header bar
+      const top = el('div', { cls: 'ffg-top paper' });
+      top.appendChild(el('div', { cls: 'f-mark', text: 'F' }));
+      const t = el('div', { style: { flex: '1' } });
+      t.appendChild(el('div', { cls: 'ttl', text: 'Faire Fulfillment Games' }));
+      t.appendChild(el('div', { cls: 'sub', text: 'PICK · PACK · LABEL · SHIP — RACING NOW' }));
+      top.appendChild(t);
+
+      // Live timer chip
+      const chip = makeTimerChip('SHIP-BY');
+      top.appendChild(chip);
+      Stagetimer.bind(chip);
+
+      // Stamp
+      top.appendChild(makeStamp('ground', 4, 'sm'));
+      stage.appendChild(top);
+
+      // ── Order-counter state (controllable from URL params, postMessage, or BroadcastChannel)
+      // URL keys: sf, kw, tor, nyc (and 0,1,2,3 as aliases). max= for the denominator.
+      // Companion: HTTP GET https://…/overlay-3-four-up.html?obs=1&sf=8&kw=6&tor=9&nyc=7
+      // Live (no reload): postMessage({type:'ffg.orders', team:'sf', value:8})  or  ({type:'ffg.orders', delta:1, team:'kw'})
+      const KEYS = ['sf', 'kw', 'tor', 'nyc'];
+      const params = new URLSearchParams(window.location.search);
+      const initial = KEYS.map((k, i) => +(params.get(k) ?? params.get(String(i)) ?? [7,5,8,6][i]));
+      let max = +(params.get('max') ?? 10);
+      // Persist across reloads so a Companion "refresh page" button doesn't reset values
+      let state;
+      try { state = JSON.parse(localStorage.getItem('ffg.orders') || 'null'); } catch (e) {}
+      if (!state || state.length !== 4) state = initial;
+      // URL params always win on first load if explicitly set
+      KEYS.forEach((k, i) => { if (params.has(k) || params.has(String(i))) state[i] = initial[i]; });
+
+      // 2x2 grid
+      const cellW = 912, cellH = 431;
+      const camW = cellW - 20 * 2;     // 872
+      const camH = cellH - 32 - 86;    // 313
+      const grid = el('div', { cls: 'grid' });
+      const chips = [];
+
+      TEAMS.forEach((tm, i) => {
+        const cell = el('div', { cls: 'cell' });
+        cell.appendChild(makeFrame({
+          width: '100%', height: '100%',
+          top: 32, side: 20, bottom: 86,
+          title: tm.name.toUpperCase(),
+          sub: `${tm.city} · ${tm.user}`,
+          tape: (i === 1 || i === 2) ? 'tr' : null,
+          corner: tm.code,
+          resW: camW, resH: camH,
+          resLabel: 'WIDE',
+          placeholderLabel: `CAM ${i+1} · ${tm.name.toUpperCase()}`,
+        }));
+        const oc = el('div', { cls: 'order-chip', attrs: { 'data-team': KEYS[i] } });
+        cell.appendChild(oc);
+        chips.push(oc);
+        grid.appendChild(cell);
+      });
+      stage.appendChild(grid);
+
+      function render() {
+        chips.forEach((c, i) => {
+          c.innerHTML = `ORDERS&nbsp;<b>${state[i]}</b>&nbsp;/&nbsp;${max}`;
+        });
+        try { localStorage.setItem('ffg.orders', JSON.stringify(state)); } catch (e) {}
+      }
+      render();
+
+      // Live control: postMessage and BroadcastChannel (the control panel uses both).
+      // msg = { type:'ffg.orders', team:'sf'|0, value:8 }  or  { delta:+1 }  or  { reset:true }
+      function applyMsg(msg) {
+        if (!msg) return;
+        if (msg.type === 'ffg.orders.state') {
+          if (Array.isArray(msg.state) && msg.state.length === 4) state = msg.state.slice();
+          if (typeof msg.max === 'number') max = msg.max;
+          render(); return;
+        }
+        if (msg.type !== 'ffg.orders') return;
+        if (msg.reset) { state = [...initial]; return render(); }
+        let i = -1;
+        if (typeof msg.team === 'number') i = msg.team;
+        else if (typeof msg.team === 'string') i = KEYS.indexOf(msg.team.toLowerCase());
+        if (i < 0 || i > 3) return;
+        if (typeof msg.value === 'number') state[i] = Math.max(0, Math.min(max, msg.value));
+        else if (typeof msg.delta === 'number') state[i] = Math.max(0, Math.min(max, state[i] + msg.delta));
+        render();
+      }
+      window.addEventListener('message', (e) => applyMsg(e.data));
+      try {
+        const bc = new BroadcastChannel('ffg-orders');
+        bc.onmessage = (e) => applyMsg(e.data);
+      } catch (e) {}
+
+      // SSE relay from server.js (active when served via localhost:3000)
+      try {
+        const es = new EventSource('/api/events');
+        es.onmessage = (e) => applyMsg(JSON.parse(e.data));
+      } catch (e) {}
+
+      // Expose for in-page console / Companion "Browser Source → execute JS"
+      window.FFG = {
+        set:   (team, value) => applyMsg({ type: 'ffg.orders', team, value }),
+        bump:  (team, delta = 1) => applyMsg({ type: 'ffg.orders', team, delta }),
+        reset: () => applyMsg({ type: 'ffg.orders', reset: true }),
+        state: () => state.slice(),
+      };
+
+      // Footer
+      const footer = el('div', { cls: 'footer' });
+      footer.appendChild(el('span', { style: { opacity: '0.6' }, text: '#FAIREFULFILLMENTGAMES' }));
+      const right = el('span', { cls: 'right' });
+      right.appendChild(el('span', { style: { opacity: '0.6' }, text: 'FOLLOW LIVE' }));
+      right.appendChild(el('span', { cls: 'url', text: 'faire.com/games' }));
+      footer.appendChild(right);
+      stage.appendChild(footer);
+
+      applyObsMode();
+      autoScale();
+    })();
+  </script>
+</body>
+</html>
