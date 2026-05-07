@@ -248,6 +248,11 @@
       .then(cfg => {
         relayOk = true;
         updateStatus();
+        if (Array.isArray(cfg.state) && cfg.state.length === 4) {
+          state = cfg.state.slice();
+          if (typeof cfg.max === 'number') maxOrders = cfg.max;
+          render();
+        }
         const sec = document.getElementById('timer-section');
         sec.style.display = '';
         if (!cfg.configured) {
