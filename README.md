@@ -15,8 +15,16 @@ OBS-ready browser-source overlays for the four-team fulfillment livestream. Card
 ├── design-canvas.jsx                        ← Pan/zoom canvas component
 └── obs/                                     ← THE FILES OBS LOADS
     ├── overlay-1-single-pip.html            ← Wide cam + POV PiP
+    ├── overlay-1-wide-only.html             ← Wide cam only (no PiP)
     ├── overlay-2-four-portrait.html         ← Title / open — four portraits
     ├── overlay-3-four-up.html               ← Live four-up grid w/ order counters
+    ├── overlay-4-head-to-head.html          ← Two-team matchup w/ live scores (?l=sf&r=nyc)
+    ├── overlay-4-head-to-head-kw-tor.html   ← Preset: KW vs TOR
+    ├── overlay-5-champion.html              ← Winner reveal — single hero cam (?winner=tor)
+    ├── overlay-5-champion-sf.html           ← Preset: SF wins
+    ├── overlay-5-champion-kw.html           ← Preset: KW wins
+    ├── overlay-5-champion-tor.html          ← Preset: TOR wins
+    ├── overlay-5-champion-nyc.html          ← Preset: NYC wins
     ├── control.html                         ← Tablet score controller (served by server.js)
     ├── server.js                            ← Relay server: serves obs/, score API, SSE, timer proxy
     ├── start.sh                             ← Convenience launcher: `bash obs/start.sh`
@@ -82,6 +90,13 @@ For each overlay add a **Browser Source** in OBS:
 | Overlay 1b | Wide cam only (no PiP) | `http://localhost:3000/overlay-1-wide-only.html?obs=1` |
 | Overlay 2 | Title / four portraits | `http://localhost:3000/overlay-2-four-portrait.html?obs=1` |
 | Overlay 3 | Live four-up + order counters | `http://localhost:3000/overlay-3-four-up.html?obs=1` |
+| Overlay 4 | Head-to-head (SF vs NYC default) | `http://localhost:3000/overlay-4-head-to-head.html?obs=1` |
+| Overlay 4 KW/TOR | Head-to-head KW vs TOR preset | `http://localhost:3000/overlay-4-head-to-head-kw-tor.html?obs=1` |
+| Overlay 5 | Champion reveal (TOR default) | `http://localhost:3000/overlay-5-champion.html?obs=1` |
+| Overlay 5 SF | Champion — SF wins | `http://localhost:3000/overlay-5-champion-sf.html?obs=1` |
+| Overlay 5 KW | Champion — KW wins | `http://localhost:3000/overlay-5-champion-kw.html?obs=1` |
+| Overlay 5 TOR | Champion — TOR wins | `http://localhost:3000/overlay-5-champion-tor.html?obs=1` |
+| Overlay 5 NYC | Champion — NYC wins | `http://localhost:3000/overlay-5-champion-nyc.html?obs=1` |
 
 Replace `?obs=1` with any of the chroma-key flags below:
 
@@ -97,6 +112,35 @@ Replace `?obs=1` with any of the chroma-key flags below:
 All flags hide the design-time placeholders and resolution chips.
 
 The design-canvas page (`Faire Fulfillment Games Overlays.html`) has a **COPY** button per overlay that builds the absolute URL with `?obs=1` already appended — update the host to `localhost:3000` after copying.
+
+---
+
+## Overlay 4 — Head-to-Head
+
+Two-team matchup with live order counts in the header. Same shared score state as Overlay 3 — scores flow through the same tablet controller.
+
+| URL param | Default | Description |
+|---|---|---|
+| `?l=` | `sf` | Left team key (`sf`, `kw`, `tor`, `nyc`) |
+| `?r=` | `nyc` | Right team key |
+| `?max=` | `10` | Target / denominator shown in score pills |
+| `?sf=`, `?kw=`, etc. | `0` | Seed a team's starting score |
+
+Preset files (`-kw-tor`) redirect to the main file with defaults pre-set — use them for OBS Browser Sources that are hard to edit mid-show.
+
+---
+
+## Overlay 5 — Champion
+
+Single hero cam for the winning team. Shows team name, city, final score, a 1st-place Faire postage badge, and a large diagonal **DELIVERED** rubber stamp.
+
+| URL param | Default | Description |
+|---|---|---|
+| `?winner=` | `tor` | Winning team key (`sf`, `kw`, `tor`, `nyc`) |
+| `?final=` | same as `max` | Final score displayed in the kicker chip |
+| `?max=` | `10` | Target / denominator |
+
+Preset files (`-sf`, `-kw`, `-tor`, `-nyc`) redirect with the winner pre-set.
 
 ---
 

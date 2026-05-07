@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <script>
+    var q = new URLSearchParams(location.search);
+    if (!q.has('l')) q.set('l', 'kw');
+    if (!q.has('r')) q.set('r', 'tor');
+    location.replace('overlay-4-head-to-head.html?' + q.toString());
+  </script>
+</head>
+</html>

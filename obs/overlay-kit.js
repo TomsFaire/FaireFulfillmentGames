@@ -183,6 +183,7 @@ window.TEAMS = [
       fragile:  { top: '· STAMP ·',    main: 'FRAGILE',     cls: '' },
       ground:   { top: '· SHIP VIA ·', main: 'GROUND ONLY', cls: 'ground' },
       priority: { top: '· SERVICE ·',  main: 'PRIORITY',    cls: '' },
+      rush:     { top: '· SHIP VIA ·', main: 'RUSH',        cls: '' },
     };
     const v = variants[variant] || variants.fragile;
     const cls = 'stamp ' + (v.cls) + (size === 'sm' ? ' sm' : '');

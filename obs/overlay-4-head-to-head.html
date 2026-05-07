@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>FFG Overlay 4 — Head-to-Head</title>
+  <meta name="viewport" content="width=1920, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="cardboard.css" />
+  <style>
+    .h2h-top {
+      position: absolute; top: 28px; left: 56px; right: 56px;
+      height: 110px;
+      display: flex; align-items: center;
+      padding: 0 28px; gap: 20px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    }
+    .h2h-top .ttl {
+      font-family: var(--serif); font-size: 38px; line-height: 1;
+      color: var(--ink); font-weight: 500;
+    }
+    .h2h-top .sub {
+      margin-top: 6px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.36em;
+      color: var(--red);
+    }
+    .h2h-top .f-mark { width: 70px; height: 70px; font-size: 40px; }
+
+    .h2h-top .score-pair {
+      display: flex; align-items: stretch; gap: 10px;
+    }
+    .h2h-top .score-pill {
+      background: var(--ink); color: var(--cream);
+      border: 1px solid var(--kraft-light);
+      border-radius: 3px;
+      padding: 8px 16px;
+      font-family: var(--mono);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      display: flex; flex-direction: column;
+      min-width: 132px;
+    }
+    .h2h-top .score-pill .who {
+      font-size: 10px; letter-spacing: 0.28em;
+      opacity: 0.65; font-weight: 700;
+    }
+    .h2h-top .score-pill .num {
+      display: flex; align-items: baseline; gap: 6px; margin-top: 2px;
+    }
+    .h2h-top .score-pill .num b {
+      font-size: 44px; font-weight: 700;
+      color: var(--kraft-light); line-height: 0.95;
+    }
+    .h2h-top .score-pill .num .max {
+      font-size: 16px; opacity: 0.5;
+    }
+    .h2h-top .score-pill.right .who,
+    .h2h-top .score-pill.right .num { align-self: flex-end; }
+
+    .h2h-cell {
+      position: absolute;
+      width: 819px; height: 760px;
+      top: 184px;
+    }
+    .h2h-cell.left  { left: 56px; }
+    .h2h-cell.right { right: 56px; }
+  </style>
+</head>
+<body>
+  <div class="stage" id="stage" data-screen-label="Overlay 4 — Head-to-Head"></div>
+
+  <script src="overlay-kit.js"></script>
+  <script src="stagetimer.js"></script>
+  <script>
+    (function () {
+      const { el, makeFrame, makeStamp, makeTimerChip, autoScale, applyObsMode } = window.OverlayKit;
+      const stage = document.getElementById('stage');
+      const TEAMS = window.TEAMS;
+
+      const TWEAKS = /*EDITMODE-BEGIN*/{
+        "showTitleBanner": true,
+        "scoreColor": "#e6cfa3",
+        "title": "Head-to-Head",
+        "subtitle": "",
+        "max": 10
+      }/*EDITMODE-END*/;
+
+      function applyTweaks() {
+        document.querySelectorAll('.h2h-top').forEach(n => n.style.display = TWEAKS.showTitleBanner ? '' : 'none');
+        document.querySelectorAll('.score-pill .num b').forEach(n => n.style.color = TWEAKS.scoreColor);
+        const ttl = document.querySelector('.h2h-top .ttl'); if (ttl) ttl.textContent = TWEAKS.title;
+        const sub = document.querySelector('.h2h-top .sub'); if (sub) sub.textContent = TWEAKS.subtitle;
+      }
+
+      const KEYS = ['sf', 'kw', 'tor', 'nyc'];
+      const params = new URLSearchParams(location.search);
+      const leftIdx  = Math.max(0, KEYS.indexOf((params.get('l') || 'sf').toLowerCase()));
+      const rightIdx = Math.max(0, KEYS.indexOf((params.get('r') || 'nyc').toLowerCase()));
+      const left  = TEAMS[leftIdx];
+      const right = TEAMS[rightIdx];
+
+      // ── Top banner ──────────────────────────────────────────────────
+      const top = el('div', { cls: 'h2h-top paper' });
+      top.appendChild(el('div', { cls: 'f-mark', text: 'F' }));
+      const t = el('div', { style: { flex: '1' } });
+      t.appendChild(el('div', { cls: 'ttl', text: 'Head-to-Head' }));
+      t.appendChild(el('div', { cls: 'sub', text: '' }));
+      top.appendChild(t);
+
+      const chip = makeTimerChip('SHIP-BY');
+      top.appendChild(chip);
+      Stagetimer.bind(chip);
+      Stagetimer.initFromServer();
+
+      const leftPill = el('div', { cls: 'score-pill left' });
+      leftPill.appendChild(el('div', { cls: 'who', text: left.code + ' · ' + left.user }));
+      const leftNum = el('div', { cls: 'num' });
+      leftNum.appendChild(el('b', { attrs: { 'data-h2h-score-l': '' }, text: '0' }));
+      leftNum.appendChild(el('span', { cls: 'max', attrs: { 'data-h2h-max-l': '' } }));
+      leftPill.appendChild(leftNum);
+
+      const rightPill = el('div', { cls: 'score-pill right' });
+      rightPill.appendChild(el('div', { cls: 'who', text: right.code + ' · ' + right.user }));
+      const rightNum = el('div', { cls: 'num' });
+      rightNum.appendChild(el('b', { attrs: { 'data-h2h-score-r': '' }, text: '0' }));
+      rightNum.appendChild(el('span', { cls: 'max', attrs: { 'data-h2h-max-r': '' } }));
+      rightPill.appendChild(rightNum);
+
+      const pair = el('div', { cls: 'score-pair' });
+      pair.appendChild(leftPill);
+      pair.appendChild(rightPill);
+      top.appendChild(pair);
+
+      top.appendChild(makeStamp('rush', -4, 'sm'));
+      stage.appendChild(top);
+
+      // ── Two cam cells ───────────────────────────────────────────────
+      const cellW = 819, cellH = 760;
+      const camW = cellW - 28 * 2;  // 763
+      const camH = cellH - 56 - 100; // 604
+
+      function buildCell(side, team) {
+        const cell = el('div', { cls: 'h2h-cell ' + side });
+        cell.appendChild(makeFrame({
+          width: cellW, height: cellH,
+          top: 56, side: 28, bottom: 100,
+          title: team.name.toUpperCase(),
+          sub: `${team.city} · ${team.user}`,
+          tape: side === 'left' ? 'tr' : 'bl',
+          corner: team.code,
+          resW: camW, resH: camH,
+          resLabel: 'HEAD-TO-HEAD',
+          placeholderLabel: `CAM · ${team.name.toUpperCase()}`,
+          hideMiniStamp: true,
+          titleSize: 28,
+        }));
+        return cell;
+      }
+
+      stage.appendChild(buildCell('left',  left));
+      stage.appendChild(buildCell('right', right));
+
+      // ── Score state (shared 4-team store with overlay 3) ────────────
+      const initial = KEYS.map((k, i) => +(params.get(k) ?? 0));
+      let max = +(params.get('max') ?? TWEAKS.max);
+      let state;
+      try { state = JSON.parse(localStorage.getItem('ffg.orders') || 'null'); } catch (e) {}
+      if (!state || state.length !== 4) state = initial;
+      KEYS.forEach((k, i) => { if (params.has(k)) state[i] = initial[i]; });
+
+      function render() {
+        [['l', leftIdx], ['r', rightIdx]].forEach(([s, idx]) => {
+          const v = Math.max(0, Math.min(max, state[idx]));
+          const scoreEl = stage.querySelector('[data-h2h-score-' + s + ']');
+          const maxEl   = stage.querySelector('[data-h2h-max-' + s + ']');
+          if (scoreEl) scoreEl.textContent = v;
+          if (maxEl)   maxEl.textContent   = '/ ' + max;
+        });
+        try { localStorage.setItem('ffg.orders', JSON.stringify(state)); } catch (e) {}
+      }
+
+      function applyMsg(msg) {
+        if (!msg) return;
+        if (msg.type === 'ffg.orders.state') {
+          if (Array.isArray(msg.state) && msg.state.length === 4) state = msg.state.slice();
+          if (typeof msg.max === 'number') max = msg.max;
+          return render();
+        }
+        if (msg.type !== 'ffg.orders') return;
+        if (msg.reset) { state = [...initial]; return render(); }
+        let i = -1;
+        if (typeof msg.team === 'number') i = msg.team;
+        else if (typeof msg.team === 'string') i = KEYS.indexOf(msg.team.toLowerCase());
+        if (i < 0 || i > 3) return;
+        if (typeof msg.value === 'number') state[i] = Math.max(0, Math.min(max, msg.value));
+        else if (typeof msg.delta === 'number') state[i] = Math.max(0, Math.min(max, state[i] + msg.delta));
+        render();
+      }
+      window.addEventListener('message', (e) => applyMsg(e.data));
+      try {
+        const bc = new BroadcastChannel('ffg-orders');
+        bc.onmessage = (e) => applyMsg(e.data);
+      } catch (e) {}
+      if (location.protocol !== 'file:') try {
+        const es = new EventSource('/api/events');
+        es.onmessage = (e) => { try { applyMsg(JSON.parse(e.data)); } catch (e) {} };
+      } catch (e) {}
+
+      window.FFG = {
+        set:   (team, value) => applyMsg({ type: 'ffg.orders', team, value }),
+        bump:  (team, delta = 1) => applyMsg({ type: 'ffg.orders', team, delta }),
+        reset: () => applyMsg({ type: 'ffg.orders', reset: true }),
+        state: () => state.slice(),
+      };
+
+      applyTweaks();
+      render();
+
+      // ── Tweaks panel (design-host protocol) ─────────────────────────
+      (function setupTweaks() {
+        const panel = document.createElement('div');
+        panel.id = 'tweaks-panel';
+        panel.style.cssText = `
+          position:fixed;bottom:16px;right:16px;z-index:9999;
+          width:280px;padding:14px 16px;
+          background:#2b2622;color:#fbf8f6;
+          font-family:'Inter',system-ui,sans-serif;font-size:12px;
+          border:1px solid #c9a574;border-radius:6px;
+          box-shadow:0 8px 24px rgba(0,0,0,0.5);display:none;
+        `;
+        const row = (label, ctrl) =>
+          `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid rgba(201,165,116,0.15);">
+            <span style="opacity:0.7;font-size:11px;letter-spacing:0.06em;">${label}</span>${ctrl}</div>`;
+        const ck  = k => `<input type="checkbox" data-tweak="${k}" ${TWEAKS[k]?'checked':''} style="cursor:pointer;accent-color:#c9a574;">`;
+        const txt = k => `<input type="text"   data-tweak="${k}" value="${(TWEAKS[k]+'').replace(/"/g,'&quot;')}" style="background:#1a1816;color:#fbf8f6;border:1px solid #6b4a22;border-radius:3px;padding:4px 6px;font:inherit;width:140px;">`;
+        const num = k => `<input type="number" data-tweak="${k}" value="${TWEAKS[k]}" min="1" max="99" style="background:#1a1816;color:#fbf8f6;border:1px solid #6b4a22;border-radius:3px;padding:4px 6px;font:inherit;width:60px;">`;
+        const col = k => `<input type="color"  data-tweak="${k}" value="${TWEAKS[k]}" style="cursor:pointer;width:40px;height:24px;border:1px solid #6b4a22;background:transparent;">`;
+
+        panel.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div style="font-family:'Lora',serif;font-size:16px;font-weight:500;">Tweaks</div>
+            <button id="tweaks-close" style="background:transparent;border:none;color:#fbf8f6;cursor:pointer;font-size:16px;line-height:1;opacity:0.6;">×</button>
+          </div>
+          ${row('Title banner', ck('showTitleBanner'))}
+          ${row('Title', txt('title'))}
+          ${row('Subtitle', txt('subtitle'))}
+          ${row('Score color', col('scoreColor'))}
+          ${row('Max / target', num('max'))}
+        `;
+        document.body.appendChild(panel);
+
+        panel.querySelector('#tweaks-close').addEventListener('click', () => {
+          panel.style.display = 'none';
+          window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+        });
+        panel.querySelectorAll('[data-tweak]').forEach(input => {
+          input.addEventListener('input', () => {
+            const k = input.getAttribute('data-tweak');
+            const v = input.type === 'checkbox' ? input.checked : input.type === 'number' ? +input.value : input.value;
+            TWEAKS[k] = v;
+            if (k === 'max') { max = v; render(); }
+            applyTweaks();
+            window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [k]: v } }, '*');
+          });
+        });
+        window.addEventListener('message', (e) => {
+          if (!e.data) return;
+          if (e.data.type === '__activate_edit_mode')   panel.style.display = 'block';
+          if (e.data.type === '__deactivate_edit_mode') panel.style.display = 'none';
+        });
+        window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+      })();
+
+      applyObsMode();
+      autoScale();
+    })();
+  </script>
+</body>
+</html>
