@@ -56,7 +56,7 @@ function broadcast(msg) {
 }
 
 // ── Stagetimer proxy helper ───────────────────────────────────
-function stagetimePost(action, callback) {
+function stagetimerPost(action, callback) {
   const { STAGETIMER_ROOM_ID, STAGETIMER_TIMER_ID, STAGETIMER_API_KEY } = ENV;
   if (!STAGETIMER_ROOM_ID || !STAGETIMER_TIMER_ID || !STAGETIMER_API_KEY) {
     return callback(new Error('timer not configured'));
@@ -96,7 +96,10 @@ const server = http.createServer((req, res) => {
     // Send full state snapshot on connect so overlay syncs immediately
     res.write(`data: ${JSON.stringify({ type: 'ffg.orders.state', state: state.slice(), max: maxOrders })}\n\n`);
     const ping = setInterval(() => {
-      try { res.write(': ping\n\n'); } catch { clearInterval(ping); }
+      try { res.write(': ping\n\n'); } catch {
+        clearInterval(ping);
+        clients = clients.filter(c => c !== res);
+      }
     }, 15000);
     req.on('close', () => {
       clearInterval(ping);
@@ -117,7 +120,7 @@ const server = http.createServer((req, res) => {
     if (!['start', 'stop', 'reset'].includes(action)) {
       return json(res, 400, { ok: false, error: 'unknown timer action' });
     }
-    stagetimePost(action, (err, status, body) => {
+    stagetimerPost(action, (err, status, body) => {
       if (err) return json(res, 503, { ok: false, error: err.message });
       json(res, status < 300 ? 200 : 502, { ok: status < 300, upstream: body });
     });
@@ -127,7 +130,10 @@ const server = http.createServer((req, res) => {
   // ── Orders API ───────────────────────────────────────────────
   if (req.method === 'POST' && url.pathname.startsWith('/api/orders/')) {
     let raw = '';
-    req.on('data', d => (raw += d));
+    req.on('data', d => {
+      raw += d;
+      if (raw.length > 65536) { req.socket.destroy(); }
+    });
     req.on('end', () => {
       let data = {};
       try { data = JSON.parse(raw); } catch { /* ignore */ }
