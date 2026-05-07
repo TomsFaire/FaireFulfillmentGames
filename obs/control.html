@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>FFG Order Control</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --kraft:#c9a574; --kraft-deep:#6b4a22; --ink:#2b2622; --cream:#fbf8f6;
+    --paper:#f4ead6; --red:#a8442c; --green:#2d6a2d; --amber:#7a5f00;
+    --mono: ui-monospace,'SF Mono',Menlo,monospace;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    font-family:'Inter',sans-serif; background:#1a1816; color:var(--cream);
+    min-height:100dvh; display:flex; flex-direction:column;
+    padding:16px; gap:12px;
+  }
+
+  /* Header */
+  .header { display:flex; align-items:center; justify-content:space-between; }
+  .header h1 { font-family:'Lora',serif; font-style:italic; font-weight:500;
+               font-size:22px; color:var(--kraft); }
+  .status-pill { font-size:10px; font-weight:700; letter-spacing:.12em;
+                 padding:4px 10px; border-radius:20px; }
+  .status-pill.live    { background:#1a3a1a; color:#6ecf6e; }
+  .status-pill.local   { background:#3a2e00; color:#e0b840; }
+  .status-pill.offline { background:#3a1a1a; color:#cf6e6e; }
+
+  /* Timer section */
+  .timer-section { background:#2b2622; border-radius:8px; padding:12px 14px; }
+  .timer-label   { font-size:10px; letter-spacing:.2em; color:var(--kraft);
+                   margin-bottom:10px; }
+  .timer-btns    { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .timer-btns button {
+    padding:13px 0; border:none; border-radius:6px; font-family:var(--mono);
+    font-size:13px; font-weight:700; letter-spacing:.08em; cursor:pointer;
+    touch-action:manipulation;
+  }
+  .timer-btns button:active { opacity:.75; }
+  .btn-start { background:var(--green); color:#fff; }
+  .btn-stop  { background:var(--red);   color:#fff; }
+  .btn-treset{ background:#3a3632;      color:var(--kraft); }
+  .timer-btns button:disabled { opacity:.35; cursor:not-allowed; }
+  .timer-msg  { font-size:11px; opacity:.5; margin-top:8px; min-height:16px; }
+  .timer-unconfigured { font-size:12px; color:var(--kraft); opacity:.6; font-style:italic; }
+
+  /* Team rows */
+  .team-row {
+    background:var(--paper); border-radius:8px; padding:12px 14px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .team-info    { flex:1; min-width:0; }
+  .team-city    { font-size:9px; letter-spacing:.2em; color:var(--kraft-deep); opacity:.65; }
+  .team-name    { font-family:'Lora',serif; font-size:17px; color:var(--ink); }
+  .score-ctrls  { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+  .btn-dec, .btn-inc {
+    width:52px; height:52px; border:none; border-radius:6px; cursor:pointer;
+    font-family:var(--mono); font-size:26px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    touch-action:manipulation;
+  }
+  .btn-dec:active, .btn-inc:active { opacity:.7; }
+  .btn-dec { background:var(--red);  color:#fff; }
+  .btn-inc { background:var(--ink);  color:var(--cream); }
+  .score-display { text-align:center; }
+  .score-val { font-family:var(--mono); font-size:34px; font-weight:700;
+               color:var(--ink); line-height:1; }
+  .score-max { font-size:12px; color:var(--ink); opacity:.35; margin-top:1px; }
+
+  /* Footer */
+  .footer { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .goal-row { display:flex; align-items:center; gap:8px; font-size:12px; opacity:.7; }
+  .goal-row input {
+    width:56px; padding:5px 8px; font-family:var(--mono); font-size:13px;
+    border:1px solid var(--kraft-deep); border-radius:4px;
+    background:#2b2622; color:var(--cream); text-align:center;
+  }
+  .btn-reset-all {
+    background:var(--kraft-deep); color:var(--cream); border:none;
+    border-radius:6px; padding:10px 18px; font-family:var(--mono);
+    font-size:11px; letter-spacing:.2em; font-weight:700; cursor:pointer;
+    touch-action:manipulation;
+  }
+  .btn-reset-all:active { opacity:.75; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Order Control</h1>
+  <div class="status-pill offline" id="status-pill">OFFLINE</div>
+</div>
+
+<!-- Timer section — hidden until /api/timer/config confirms configured -->
+<div class="timer-section" id="timer-section" style="display:none">
+  <div class="timer-label">SHIP-BY TIMER</div>
+  <div class="timer-btns" id="timer-btns">
+    <button class="btn-start" id="btn-start">▶ START</button>
+    <button class="btn-stop"  id="btn-stop">■ STOP</button>
+    <button class="btn-treset">↺ RESET</button>
+  </div>
+  <div class="timer-msg" id="timer-msg"></div>
+</div>
+
+<div id="teams"></div>
+
+<div class="footer">
+  <div class="goal-row">
+    <label for="max-input">Goal:</label>
+    <input id="max-input" type="number" min="1" value="10" />
+  </div>
+  <button class="btn-reset-all" id="btn-reset-all">RESET ALL</button>
+</div>
+
+<script>
+  const TEAMS = [
+    { key:'sf',  name:'Team SF',  city:'SAN FRANCISCO' },
+    { key:'kw',  name:'Team KW',  city:'KITCHENER-WATERLOO' },
+    { key:'tor', name:'Team TOR', city:'TORONTO' },
+    { key:'nyc', name:'Team NYC', city:'NEW YORK' },
+  ];
+
+  // ── State ──────────────────────────────────────────────────
+  let state = JSON.parse(localStorage.getItem('ffg.orders') || 'null') || [0, 0, 0, 0];
+  let maxOrders = +(localStorage.getItem('ffg.max') || 10);
+
+  // ── BroadcastChannel (same-machine fallback) ───────────────
+  let bc = null;
+  try { bc = new BroadcastChannel('ffg-orders'); } catch (e) {}
+
+  // ── Relay (cross-device via server.js) ────────────────────
+  const IS_SERVED = location.protocol !== 'file:';
+  let relayOk = false;
+
+  function relayPost(path, body) {
+    if (!IS_SERVED) return;
+    fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+      .then(r => { relayOk = r.ok; updateStatus(); })
+      .catch(() => { relayOk = false; updateStatus(); });
+  }
+
+  function updateStatus() {
+    const pill = document.getElementById('status-pill');
+    if (!IS_SERVED)  { pill.className = 'status-pill local';   pill.textContent = 'LOCAL';   return; }
+    if (relayOk)     { pill.className = 'status-pill live';    pill.textContent = 'LIVE';    }
+    else             { pill.className = 'status-pill offline'; pill.textContent = 'OFFLINE'; }
+  }
+
+  // ── Render ─────────────────────────────────────────────────
+  function render() {
+    TEAMS.forEach((t, i) => {
+      const val = document.getElementById('val-' + t.key);
+      const mx  = document.getElementById('max-' + t.key);
+      if (val) val.textContent = state[i];
+      if (mx)  mx.textContent  = '/ ' + maxOrders;
+    });
+    document.getElementById('max-input').value = maxOrders;
+    localStorage.setItem('ffg.orders', JSON.stringify(state));
+    localStorage.setItem('ffg.max', maxOrders);
+  }
+
+  // ── Build team rows ────────────────────────────────────────
+  const teamsEl = document.getElementById('teams');
+  teamsEl.style.cssText = 'display:flex;flex-direction:column;gap:10px';
+  TEAMS.forEach((t, i) => {
+    const row = document.createElement('div');
+    row.className = 'team-row';
+    row.innerHTML = `
+      <div class="team-info">
+        <div class="team-city">${t.city}</div>
+        <div class="team-name">${t.name}</div>
+      </div>
+      <div class="score-ctrls">
+        <button class="btn-dec" data-key="${t.key}" data-delta="-1">−</button>
+        <div class="score-display">
+          <div class="score-val" id="val-${t.key}">${state[i]}</div>
+          <div class="score-max" id="max-${t.key}">/ ${maxOrders}</div>
+        </div>
+        <button class="btn-inc" data-key="${t.key}" data-delta="1">+</button>
+      </div>`;
+    teamsEl.appendChild(row);
+  });
+
+  // ── Score button handler ───────────────────────────────────
+  document.getElementById('teams').addEventListener('click', e => {
+    const btn = e.target.closest('[data-key]');
+    if (!btn) return;
+    const key   = btn.dataset.key;
+    const delta = +(btn.dataset.delta);
+    const i     = TEAMS.findIndex(t => t.key === key);
+    state[i] = Math.max(0, Math.min(maxOrders, state[i] + delta));
+    if (bc) bc.postMessage({ type: 'ffg.orders', team: key, delta });
+    relayPost('/api/orders/bump', { team: key, delta });
+    render();
+  });
+
+  // ── Goal input ─────────────────────────────────────────────
+  document.getElementById('max-input').addEventListener('change', e => {
+    maxOrders = Math.max(1, +(e.target.value) || 10);
+    state = state.map(v => Math.min(maxOrders, v));
+    if (bc) bc.postMessage({ type: 'ffg.orders.state', state: state.slice(), max: maxOrders });
+    relayPost('/api/orders/max', { max: maxOrders });
+    render();
+  });
+
+  // ── Reset all ──────────────────────────────────────────────
+  document.getElementById('btn-reset-all').addEventListener('click', () => {
+    state = [0, 0, 0, 0];
+    if (bc) bc.postMessage({ type: 'ffg.orders', reset: true });
+    relayPost('/api/orders/reset', {});
+    render();
+  });
+
+  // ── Timer controls ─────────────────────────────────────────
+  function timerAction(action) {
+    const msgEl = document.getElementById('timer-msg');
+    msgEl.textContent = action + 'ing…';
+    fetch('/api/timer/' + action, { method: 'POST' })
+      .then(r => r.json())
+      .then(d => { msgEl.textContent = d.ok ? '' : ('Error: ' + (d.error || 'unknown')); })
+      .catch(err => { msgEl.textContent = 'Error: ' + err.message; });
+  }
+
+  document.getElementById('timer-section').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    if (btn.classList.contains('btn-start'))  timerAction('start');
+    if (btn.classList.contains('btn-stop'))   timerAction('stop');
+    if (btn.classList.contains('btn-treset')) timerAction('reset');
+  });
+
+  // ── Init ───────────────────────────────────────────────────
+  render();
+  updateStatus();
+
+  if (IS_SERVED) {
+    // Warm up relay status
+    fetch('/api/events').then(r => { relayOk = r.ok; updateStatus(); }).catch(() => {});
+    // Show timer section if credentials are configured
+    fetch('/api/timer/config')
+      .then(r => r.json())
+      .then(cfg => {
+        const sec = document.getElementById('timer-section');
+        sec.style.display = '';
+        if (!cfg.configured) {
+          document.getElementById('timer-btns').style.display = 'none';
+          const msg = document.createElement('div');
+          msg.className = 'timer-unconfigured';
+          msg.textContent = 'Timer not configured — add credentials to obs/.env';
+          sec.appendChild(msg);
+        }
+      })
+      .catch(() => { /* server not running — leave timer section hidden */ });
+  }
+</script>
+</body>
+</html>
