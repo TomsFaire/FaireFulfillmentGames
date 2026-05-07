@@ -117,7 +117,17 @@ The design-canvas page (`Faire Fulfillment Games Overlays.html`) has a **COPY** 
 
 ## Overlay 4 — Head-to-Head
 
-Two-team matchup with live order counts in the header. Same shared score state as Overlay 3 — scores flow through the same tablet controller.
+Two-team side-by-side layout for semi-finals or head-to-head matchups. Each team gets a full-height camera frame; both live order counts sit in the top header so the score is always visible without covering either feed. A SHIP-BY timer chip and a RUSH stamp round out the header.
+
+### Layout
+
+- Header banner (kraft paper): F mark · title · SHIP-BY timer · two score pills · RUSH stamp
+- Left cell: 819×760px cardboard frame, team name / city in the shipping label
+- Right cell: mirrored, tape strip on opposite corner
+
+### Teams and score
+
+Pick any two teams via URL:
 
 | URL param | Default | Description |
 |---|---|---|
@@ -126,21 +136,33 @@ Two-team matchup with live order counts in the header. Same shared score state a
 | `?max=` | `10` | Target / denominator shown in score pills |
 | `?sf=`, `?kw=`, etc. | `0` | Seed a team's starting score |
 
-Preset files (`-kw-tor`) redirect to the main file with defaults pre-set — use them for OBS Browser Sources that are hard to edit mid-show.
+Score state is the **same shared `localStorage['ffg.orders']` store as Overlay 3** — bump scores on the tablet controller and both overlays update simultaneously. All the same control methods work: tablet controller, `FFG.bump()` / `FFG.set()` in the browser console, Companion HTTP, or postMessage.
+
+### Preset files
+
+`overlay-4-head-to-head-kw-tor.html` redirects to the main file with `?l=kw&r=tor` pre-set. Use preset files for OBS Browser Sources that are hard to edit mid-show. Add your own by copying the pattern.
 
 ---
 
 ## Overlay 5 — Champion
 
-Single hero cam for the winning team. Shows team name, city, final score, a 1st-place Faire postage badge, and a large diagonal **DELIVERED** rubber stamp.
+End-of-show winner reveal. Mimics the single-cam layout so the transition feels continuous — same 1760×860 hero cam frame, same position on canvas. The graphic dresses it up with:
+
+- **Top kicker banner** — team name in large serif, city and handle, "· FFG 2026 CHAMPION ·" kicker in red, and a final score chip
+- **1st-place Faire postage badge** — rotated stamp in the upper-left of the cam window
+- **DELIVERED** — large diagonal rubber stamp over the lower portion of the cam feed
+
+### Winner selection
 
 | URL param | Default | Description |
 |---|---|---|
 | `?winner=` | `tor` | Winning team key (`sf`, `kw`, `tor`, `nyc`) |
-| `?final=` | same as `max` | Final score displayed in the kicker chip |
+| `?final=` | same as `max` | Final score to display in the kicker chip |
 | `?max=` | `10` | Target / denominator |
 
-Preset files (`-sf`, `-kw`, `-tor`, `-nyc`) redirect with the winner pre-set.
+### Preset files
+
+Four team presets (`-sf`, `-kw`, `-tor`, `-nyc`) redirect to the main file with the winner pre-set. In OBS, add all four as separate Browser Sources and toggle visibility to reveal the winner without touching URLs mid-show.
 
 ---
 
@@ -164,7 +186,7 @@ In `?key=1` mode every graphic element (frames, banners, timer chip, order count
 
 ## Live timer (Stagetimer)
 
-The SHIP-BY clock at the top of overlays 1 and 3 binds to a [Stagetimer](https://stagetimer.io) room.
+The SHIP-BY clock at the top of overlays 1, 3, and 4 binds to a [Stagetimer](https://stagetimer.io) room.
 
 Credentials live in `obs/.env` (never in the URL). The overlay fetches them from the relay server (`server.js`) on load — **the server must be running before OBS loads the overlay, or the clock falls back to local time-of-day**. Fill in `obs/.env` before starting `server.js`:
 
