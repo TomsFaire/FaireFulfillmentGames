@@ -1,0 +1,272 @@
+/* Shared cardboard CSS for OBS overlay HTML files.
+   Transparent body so OBS Browser Source composites cleanly. */
+
+:root {
+  --kraft:       #c9a574;
+  --kraft-dark:  #9a7642;
+  --kraft-light: #e6cfa3;
+  --kraft-deep:  #6b4a22;
+  --ink:         #2b2622;
+  --ink-soft:    #3d342c;
+  --cream:       #fbf8f6;
+  --paper:       #f4ead6;
+  --tape:        #d9c896;
+  --red:         #a8442c;
+  --pov:         #1f1d1b;
+  --serif: 'Lora', Georgia, serif;
+  --sans:  'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono:  ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  width: 100%; height: 100%;
+  background: transparent;            /* OBS transparency */
+  font-family: var(--sans);
+  color: var(--ink);
+  overflow: hidden;
+}
+
+/* The 1920×1080 stage. Auto-scales to viewport so previews look right
+   in any iframe; OBS will render at exact 1920×1080 source size. */
+.stage {
+  position: relative;
+  width: 1920px; height: 1080px;
+  transform-origin: top left;
+}
+
+/* ── Cardboard textures ───────────────────────────────────────── */
+.cardboard {
+  background:
+    repeating-linear-gradient(180deg,
+      rgba(107,74,34,0.00) 0px,
+      rgba(107,74,34,0.06) 2px,
+      rgba(107,74,34,0.14) 4px,
+      rgba(255,240,210,0.10) 6px,
+      rgba(107,74,34,0.00) 8px),
+    repeating-linear-gradient(90deg,
+      rgba(0,0,0,0.00) 0px,
+      rgba(0,0,0,0.04) 1px,
+      rgba(0,0,0,0.00) 2px,
+      rgba(255,255,255,0.04) 4px),
+    radial-gradient(ellipse at 30% 20%, var(--kraft-light) 0%, var(--kraft) 45%, var(--kraft-dark) 100%);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 0 2px rgba(107,74,34,0.45),
+    inset 0 0 0 4px rgba(255,240,210,0.25),
+    0 8px 24px rgba(0,0,0,0.35);
+}
+
+.paper {
+  background-color: var(--paper);
+  background-image:
+    repeating-radial-gradient(circle at 17% 23%, rgba(0,0,0,0.02) 0 1px, transparent 1px 4px),
+    repeating-radial-gradient(circle at 73% 81%, rgba(0,0,0,0.025) 0 1px, transparent 1px 5px);
+  background-blend-mode: multiply;
+  border: 2px solid var(--kraft-deep);
+  border-radius: 4px;
+}
+
+/* ── Frame: outer cardboard + cutout cam window ───────────────── */
+.frame { position: relative; overflow: hidden; }
+.frame .corner-crease {
+  position: absolute; width: 22px; height: 22px;
+  opacity: 0.55; pointer-events: none;
+}
+.frame .corner-crease.tl { top: 8px; left: 8px;  border-top: 1.5px solid var(--kraft-deep); border-left: 1.5px solid var(--kraft-deep); }
+.frame .corner-crease.tr { top: 8px; right: 8px; border-top: 1.5px solid var(--kraft-deep); border-right: 1.5px solid var(--kraft-deep); }
+.frame .corner-crease.bl { bottom: 8px; left: 8px;  border-bottom: 1.5px solid var(--kraft-deep); border-left: 1.5px solid var(--kraft-deep); }
+.frame .corner-crease.br { bottom: 8px; right: 8px; border-bottom: 1.5px solid var(--kraft-deep); border-right: 1.5px solid var(--kraft-deep); }
+
+.frame .tape {
+  position: absolute;
+  background: rgba(232,210,160,0.55);
+  border: 1px solid rgba(180,140,80,0.4);
+  pointer-events: none;
+}
+.frame .tape.tr { top: -20px; right: -40px; width: 200px; height: 44px; transform: rotate(-32deg); transform-origin: top right; }
+.frame .tape.bl { bottom: 60px; left: -30px; width: 180px; height: 38px; transform: rotate(28deg); }
+
+.frame .corner-label {
+  position: absolute; top: 12px; left: 12px;
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.18em; color: var(--ink); opacity: 0.55;
+  padding: 3px 6px; border: 1px solid var(--ink); border-radius: 2px;
+  pointer-events: none;
+}
+
+.frame .cam {
+  position: absolute;
+  background: var(--pov);
+  box-shadow:
+    inset 0 0 0 2px rgba(0,0,0,0.6),
+    inset 0 0 0 4px rgba(201,165,116,0.3),
+    0 0 0 1px rgba(0,0,0,0.4);
+  overflow: hidden;
+}
+
+/* Banner under the cam window (shipping label) */
+.frame .label-banner {
+  position: absolute;
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 18px;
+  background-color: var(--paper);
+  background-image:
+    repeating-radial-gradient(circle at 17% 23%, rgba(0,0,0,0.02) 0 1px, transparent 1px 4px),
+    repeating-radial-gradient(circle at 73% 81%, rgba(0,0,0,0.025) 0 1px, transparent 1px 5px);
+  background-blend-mode: multiply;
+  border: 1px solid var(--kraft-deep);
+  border-radius: 3px;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.15);
+}
+.frame .barcode {
+  display: flex; align-items: center; gap: 1px; height: 60%;
+}
+.frame .barcode i {
+  display: block; height: 100%; background: var(--ink);
+}
+.frame .label-title {
+  font-family: var(--serif);
+  line-height: 1; color: var(--ink); font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.frame .label-sub {
+  font-size: 11px; margin-top: 4px;
+  color: var(--ink); opacity: 0.65;
+  letter-spacing: 0.18em; font-weight: 500; text-transform: uppercase;
+}
+
+/* Resolution callout */
+.res-chip {
+  position: absolute; z-index: 6;
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 8px;
+  background: rgba(232,210,160,0.92);
+  border: 1px solid var(--kraft-deep);
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 10px; color: var(--ink);
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}
+.res-chip .dim { font-weight: 700; }
+.res-chip .lab { opacity: 0.55; font-weight: 700; }
+.res-chip .ar  { opacity: 0.45; }
+
+/* Shipping stamp */
+.stamp {
+  border: 2.5px solid var(--red);
+  padding: 8px 14px; border-radius: 4px;
+  text-align: center; white-space: nowrap;
+  color: var(--red);
+}
+.stamp.ground { border-color: var(--kraft-deep); color: var(--kraft-deep); }
+.stamp .top  { font-size: 9px;  letter-spacing: 0.25em; font-weight: 700; }
+.stamp .main { font-size: 22px; font-weight: 700; line-height: 1; margin-top: 2px; }
+.stamp.sm     { padding: 5px 10px; }
+.stamp.sm .top  { font-size: 8px; }
+.stamp.sm .main { font-size: 16px; margin-top: 1px; }
+
+/* Cam-window placeholder content (visible only in design previews) */
+.cam-placeholder {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px;
+  color: rgba(255,255,255,0.32);
+  font-family: var(--mono);
+  font-size: 11px; letter-spacing: 0.22em;
+  background-image: repeating-linear-gradient(45deg,
+    rgba(255,255,255,0.025) 0 8px, transparent 8px 16px);
+}
+.cam-placeholder .icon {
+  position: relative; width: 38px; height: 24px;
+  border: 1.2px solid rgba(255,255,255,0.4); border-radius: 3px;
+}
+.cam-placeholder .icon::after {
+  content: ''; position: absolute; right: -8px; top: 6px;
+  width: 6px; height: 12px; background: rgba(255,255,255,0.4);
+}
+.cam-placeholder .sub { opacity: 0.7; font-size: 9px; }
+
+/* OBS mode: hide all design previews (cam placeholders + res chips),
+   and make cam windows fully transparent so video composites through. */
+body.obs .cam-placeholder,
+body.obs .res-chip { display: none !important; }
+body.obs .frame .cam {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Green-key mode: same as OBS mode but fills cam windows with chroma-key
+   green (#00ff00) so a hardware switcher can key them independently. */
+body.obs-green .cam-placeholder,
+body.obs-green .res-chip { display: none !important; }
+body.obs-green .frame .cam {
+  background: #00ff00 !important;
+  box-shadow: none !important;
+}
+
+/* Title banner header bar */
+.title-banner {
+  position: relative;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 32px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.3);
+}
+.title-banner .corner-dot {
+  position: absolute; width: 14px; height: 14px;
+  border: 1.5px solid var(--ink); border-radius: 50%; opacity: 0.4;
+}
+.title-banner .corner-dot.tl { top: 6px; left: 6px; }
+.title-banner .corner-dot.tr { top: 6px; right: 6px; }
+.title-banner .corner-dot.bl { bottom: 6px; left: 6px; }
+.title-banner .corner-dot.br { bottom: 6px; right: 6px; }
+
+.f-mark {
+  width: 56px; height: 56px;
+  background: var(--ink); color: var(--cream);
+  font-family: var(--serif); font-size: 34px; font-style: italic;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 3px; flex-shrink: 0;
+}
+.from-mark {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.32em;
+  color: var(--ink); opacity: 0.6;
+}
+.from-sub {
+  font-size: 9px; letter-spacing: 0.2em;
+  color: var(--ink); opacity: 0.45; margin-top: 2px;
+}
+.center-title {
+  text-align: center; flex: 1;
+}
+.center-title .primary {
+  font-family: var(--serif); font-size: 48px; line-height: 1;
+  color: var(--ink); font-weight: 500; letter-spacing: 0.005em;
+}
+.center-title .secondary {
+  margin-top: 8px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.4em;
+  color: var(--red);
+}
+
+/* ── Live timer chip (Stagetimer) ─────────────────────────────── */
+.timer-chip {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px;
+  background: var(--ink); color: var(--cream);
+  border-radius: 3px; font-family: var(--mono);
+}
+.timer-chip .label {
+  font-size: 10px; letter-spacing: 0.3em; opacity: 0.55;
+}
+.timer-chip .time {
+  font-size: 22px; font-weight: 600; letter-spacing: 0.05em;
+  font-variant-numeric: tabular-nums;
+  min-width: 6ch;
+}
+.timer-chip[data-st-status="offline"] .label::after { content: ' · OFFLINE'; color: var(--red); opacity: 1; }
+.timer-chip[data-st-status="local"]   .label::after { content: ' · LOCAL';   opacity: 0.5; }
+.timer-chip[data-st-status="demo"]    .label::after { content: ' · DEMO';    opacity: 0.5; }

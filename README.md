@@ -74,9 +74,16 @@ For each overlay add a **Browser Source** in OBS:
 | Shutdown source when not visible | **Unchecked** (so the timer keeps polling) |
 | Refresh browser when scene becomes active | Optional |
 
-The `?obs=1` flag does two things: hides the design-time placeholders / resolution chips, and makes the cam cutouts fully transparent so your video composites through.
+Two URL flags control the cam-window rendering:
 
-The design-canvas page (`Faire Fulfillment Games Overlays.html`) has a **COPY** button per overlay that builds the absolute URL with `?obs=1` already appended — update the host to `localhost:3000` after copying.
+| Flag | Cam windows | Use when |
+|---|---|---|
+| `?obs=1` | Transparent | Compositing in OBS (video fills through) |
+| `?obs=green` | Chroma-key green (#00ff00) | Keying in a hardware switcher |
+
+Both flags hide the design-time placeholders and resolution chips.
+
+The design-canvas page (`Faire Fulfillment Games Overlays.html`) has a **COPY** button per overlay that builds the absolute URL with `?obs=1` already appended — update the host to `localhost:3000` after copying, and swap to `?obs=green` if you're routing through a hardware switcher.
 
 ---
 
