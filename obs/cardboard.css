@@ -190,12 +190,18 @@ html, body {
 }
 .cam-placeholder .sub { opacity: 0.7; font-size: 9px; }
 
-/* OBS mode: hide all design previews (cam placeholders + res chips),
-   and make cam windows fully transparent so video composites through. */
+/* OBS mode: hide design previews, punch true alpha-0 holes through the
+   cardboard frame so OBS (and any compositor) can composite through.
+   isolation:isolate creates a stacking context on the frame; destination-out
+   on the cam zeroes the alpha of those pixels within that context. */
 body.obs .cam-placeholder,
 body.obs .res-chip { display: none !important; }
+body.obs .frame {
+  isolation: isolate;
+}
 body.obs .frame .cam {
-  background: transparent !important;
+  mix-blend-mode: destination-out;
+  background: white !important;
   box-shadow: none !important;
 }
 
