@@ -38,6 +38,53 @@ The single source of truth for **team names, cities, codes, handles** is the `TE
 
 ---
 
+## Deploy to production machine (Mac mini)
+
+### What you need
+- The project folder (copy via AirDrop, USB, or download the ZIP from GitHub)
+- [Node.js LTS](https://nodejs.org) installed on the Mac mini (one-time)
+
+### Steps
+
+**1. Copy the project folder onto the Mac mini** — anywhere is fine, e.g. `~/ffg-overlays/`.
+
+**2. Install Node.js** if it isn't already:
+- Download the macOS ARM64 installer from [nodejs.org](https://nodejs.org) and run it.
+
+**3. Run the install script once** from Terminal:
+```bash
+bash ~/ffg-overlays/install.sh
+```
+This will:
+- Confirm Node.js is found
+- Copy `obs/.env.example` → `obs/.env` if it doesn't exist yet
+- Write a `launchd` service plist to `~/Library/LaunchAgents/`
+- Start the server immediately
+
+**4. Fill in your Stagetimer credentials** in `obs/.env` (the install script creates it):
+```
+STAGETIMER_ROOM_ID=your-room-id
+STAGETIMER_TIMER_ID=your-timer-id
+STAGETIMER_API_KEY=your-api-key
+```
+Then reload the service:
+```bash
+launchctl unload ~/Library/LaunchAgents/com.faire.ffg-server.plist
+launchctl load  ~/Library/LaunchAgents/com.faire.ffg-server.plist
+```
+
+**5. The server now starts automatically at every login.** Toggle it any time in:
+**System Settings → General → Login Items → Allow in Background**
+
+### Useful commands
+```bash
+tail -f /tmp/ffg-server.log                                        # live log
+launchctl unload ~/Library/LaunchAgents/com.faire.ffg-server.plist # stop
+launchctl load   ~/Library/LaunchAgents/com.faire.ffg-server.plist # start
+```
+
+---
+
 ## Score controller setup
 
 The tablet controller runs through a small Node.js server (`obs/server.js`) on the OBS machine. The server serves the control page over your LAN, relays score changes to the OBS overlay via SSE, and proxies Stagetimer timer controls so credentials never leave the machine.

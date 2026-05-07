@@ -1,0 +1,12 @@
+{
+  "name": "ffg-overlays",
+  "version": "1.0.0",
+  "description": "Faire Fulfillment Games — OBS broadcast overlays and score relay server",
+  "main": "obs/server.js",
+  "scripts": {
+    "start": "node obs/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
