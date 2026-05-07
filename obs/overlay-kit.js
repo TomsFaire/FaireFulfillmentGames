@@ -5,10 +5,10 @@
    The TEAMS array is the single source of truth across all three files. */
 
 window.TEAMS = [
-  { name: 'Team SF',  city: 'SAN FRANCISCO',     code: 'SFO-01', user: '@team_sf'  },
-  { name: 'Team KW',  city: 'KITCHENER-WATERLOO', code: 'YKF-02', user: '@team_kw'  },
-  { name: 'Team TOR', city: 'TORONTO',           code: 'YYZ-03', user: '@team_tor' },
-  { name: 'Team NYC', city: 'NEW YORK',          code: 'JFK-04', user: '@team_nyc' },
+  { name: 'Team SF',  city: 'SAN FRANCISCO',     code: 'SFO 100', user: '@team_sf'  },
+  { name: 'Team KW',  city: 'KITCHENER-WATERLOO', code: 'YYZ 85',  user: '@team_kw'  },
+  { name: 'Team TOR', city: 'TORONTO',           code: 'TOR 420', user: '@team_tor' },
+  { name: 'Team NYC', city: 'NEW YORK',          code: 'NYC 26',  user: '@team_nyc' },
 ];
 
 (function () {
@@ -123,22 +123,24 @@ window.TEAMS = [
 
       // Text block
       const tx = el('div', { style: { flex: '1', minWidth: '0' } });
-      const titleSize = Math.min(labelH - 28, 32);
+      const titleSize = o.titleSize ?? Math.min(labelH - 28, 32);
       tx.appendChild(el('div', { cls: 'label-title', style: { fontSize: titleSize + 'px' }, text: o.title || '' }));
       if (o.sub) tx.appendChild(el('div', { cls: 'label-sub', text: o.sub }));
       banner.appendChild(tx);
 
       // Fragile mini-stamp
-      const fs = el('div', {
-        cls: 'stamp',
-        style: {
-          padding: '3px 7px', borderWidth: '1.5px', borderRadius: '2px',
-          transform: 'rotate(-4deg)', opacity: '0.85',
-        },
-      });
-      const fsTop = el('div', { style: { fontSize: '9px', letterSpacing: '0.2em', fontWeight: '700' }, text: 'HANDLE WITH CARE' });
-      fs.appendChild(fsTop);
-      banner.appendChild(fs);
+      if (!o.hideMiniStamp) {
+        const fs = el('div', {
+          cls: 'stamp',
+          style: {
+            padding: '3px 7px', borderWidth: '1.5px', borderRadius: '2px',
+            transform: 'rotate(-4deg)', opacity: '0.85',
+          },
+        });
+        const fsTop = el('div', { style: { fontSize: '9px', letterSpacing: '0.2em', fontWeight: '700' }, text: 'HANDLE WITH CARE' });
+        fs.appendChild(fsTop);
+        banner.appendChild(fs);
+      }
 
       frame.appendChild(banner);
     }

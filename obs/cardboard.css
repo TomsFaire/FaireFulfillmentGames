@@ -280,16 +280,18 @@ body.obs-blue2 { background: #0000ff !important; }
 
 /* ── Live timer chip (Stagetimer) ─────────────────────────────── */
 .timer-chip {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 14px;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 18px;
   background: var(--ink); color: var(--cream);
   border-radius: 3px; font-family: var(--mono);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+  border: 1px solid var(--kraft-light);
 }
 .timer-chip .label {
-  font-size: 10px; letter-spacing: 0.3em; opacity: 0.55;
+  font-size: 11px; letter-spacing: 0.3em; opacity: 0.6; font-weight: 600;
 }
 .timer-chip .time {
-  font-size: 22px; font-weight: 600; letter-spacing: 0.05em;
+  font-size: 28px; font-weight: 700; letter-spacing: 0.05em;
   font-variant-numeric: tabular-nums;
   min-width: 6ch;
 }

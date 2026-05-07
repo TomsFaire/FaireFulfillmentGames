@@ -34,11 +34,16 @@
     .order-chip {
       position: absolute; top: 16px; right: 32px; z-index: 5;
       background: var(--ink); color: var(--cream);
-      font-family: var(--mono); font-size: 11px;
-      padding: 4px 10px; border-radius: 3px;
-      letter-spacing: 0.15em; border: 1px solid var(--kraft-light);
+      font-family: var(--mono);
+      padding: 12px 22px 14px; border-radius: 4px;
+      border: 1px solid var(--kraft-light);
+      display: flex; flex-direction: column; align-items: flex-start;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.35);
     }
-    .order-chip b { color: var(--kraft-light); font-weight: 700; }
+    .order-chip .lbl { font-size: 11px; letter-spacing: 0.3em; opacity: 0.6; margin-bottom: 4px; font-weight: 500; }
+    .order-chip .score { font-size: 64px; font-weight: 700; color: var(--cream); letter-spacing: 0.02em; line-height: 1; display: flex; align-items: baseline; }
+    .order-chip .score b { color: var(--kraft-light); font-weight: 700; }
+    .order-chip .score .max { font-size: 26px; opacity: 0.5; margin-left: 6px; font-weight: 500; }
     .footer {
       position: absolute; bottom: 16px; left: 36px; right: 36px;
       height: 42px;
@@ -125,7 +130,7 @@
 
       function render() {
         chips.forEach((c, i) => {
-          c.innerHTML = `ORDERS&nbsp;<b>${state[i]}</b>&nbsp;/&nbsp;${max}`;
+          c.innerHTML = `<span class="lbl">ORDERS</span><span class="score"><b>${state[i]}</b><span class="max">/ ${max}</span></span>`;
         });
         try { localStorage.setItem('ffg.orders', JSON.stringify(state)); } catch (e) {}
       }
@@ -173,10 +178,6 @@
       // Footer
       const footer = el('div', { cls: 'footer' });
       footer.appendChild(el('span', { style: { opacity: '0.6' }, text: '#FAIREFULFILLMENTGAMES' }));
-      const right = el('span', { cls: 'right' });
-      right.appendChild(el('span', { style: { opacity: '0.6' }, text: 'FOLLOW LIVE' }));
-      right.appendChild(el('span', { cls: 'url', text: 'faire.com/games' }));
-      footer.appendChild(right);
       stage.appendChild(footer);
 
       applyObsMode();
