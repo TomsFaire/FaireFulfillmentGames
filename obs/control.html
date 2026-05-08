@@ -115,11 +115,12 @@
 </div>
 
 <script>
-  const TEAMS = [
-    { key:'sf',  name:'Team SF',  city:'SAN FRANCISCO' },
-    { key:'kw',  name:'Team KW',  city:'KITCHENER-WATERLOO' },
-    { key:'tor', name:'Team TOR', city:'TORONTO' },
-    { key:'nyc', name:'Team NYC', city:'NEW YORK' },
+  // Team display names — loaded from server on init, updated via SSE
+  let TEAMS = [
+    { key:'t0', name:'Team 1', city:'CITY 1' },
+    { key:'t1', name:'Team 2', city:'CITY 2' },
+    { key:'t2', name:'Team 3', city:'CITY 3' },
+    { key:'t3', name:'Team 4', city:'CITY 4' },
   ];
 
   // ── State ──────────────────────────────────────────────────
@@ -154,7 +155,7 @@
     else             { pill.className = 'status-pill offline'; pill.textContent = 'OFFLINE'; }
   }
 
-  // ── Render ─────────────────────────────────────────────────
+  // ── Render scores ──────────────────────────────────────────
   function render() {
     TEAMS.forEach((t, i) => {
       const val = document.getElementById('val-' + t.key);
@@ -170,35 +171,39 @@
   // ── Build team rows ────────────────────────────────────────
   const teamsEl = document.getElementById('teams');
   teamsEl.style.cssText = 'display:flex;flex-direction:column;gap:10px';
-  TEAMS.forEach((t, i) => {
-    const row = document.createElement('div');
-    row.className = 'team-row';
-    row.innerHTML = `
-      <div class="team-info">
-        <div class="team-city">${t.city}</div>
-        <div class="team-name">${t.name}</div>
-      </div>
-      <div class="score-ctrls">
-        <button class="btn-dec" data-key="${t.key}" data-delta="-1">−</button>
-        <div class="score-display">
-          <div class="score-val" id="val-${t.key}">${state[i]}</div>
-          <div class="score-max" id="max-${t.key}">/ ${maxOrders}</div>
+
+  function buildTeamRows() {
+    teamsEl.innerHTML = '';
+    TEAMS.forEach((t, i) => {
+      const row = document.createElement('div');
+      row.className = 'team-row';
+      row.innerHTML = `
+        <div class="team-info">
+          <div class="team-city">${t.city}</div>
+          <div class="team-name">${t.name}</div>
         </div>
-        <button class="btn-inc" data-key="${t.key}" data-delta="1">+</button>
-      </div>`;
-    teamsEl.appendChild(row);
-  });
+        <div class="score-ctrls">
+          <button class="btn-dec" data-idx="${i}" data-delta="-1">−</button>
+          <div class="score-display">
+            <div class="score-val" id="val-${t.key}">${state[i]}</div>
+            <div class="score-max" id="max-${t.key}">/ ${maxOrders}</div>
+          </div>
+          <button class="btn-inc" data-idx="${i}" data-delta="1">+</button>
+        </div>`;
+      teamsEl.appendChild(row);
+    });
+  }
+  buildTeamRows();
 
   // ── Score button handler ───────────────────────────────────
   document.getElementById('teams').addEventListener('click', e => {
-    const btn = e.target.closest('[data-key]');
+    const btn = e.target.closest('[data-idx]');
     if (!btn) return;
-    const key   = btn.dataset.key;
+    const i     = +(btn.dataset.idx);
     const delta = +(btn.dataset.delta);
-    const i     = TEAMS.findIndex(t => t.key === key);
     state[i] = Math.max(0, Math.min(maxOrders, state[i] + delta));
-    if (bc) bc.postMessage({ type: 'ffg.orders', team: key, delta });
-    relayPost('/api/orders/bump', { team: key, delta });
+    if (bc) bc.postMessage({ type: 'ffg.orders', team: i, delta });
+    relayPost('/api/orders/bump', { team: i, delta });
     render();
   });
 
@@ -241,8 +246,20 @@
   render();
   updateStatus();
 
+  // ── Apply team update from server ─────────────────────────
+  function applyTeams(newTeams) {
+    if (!Array.isArray(newTeams) || newTeams.length !== 4) return;
+    TEAMS = newTeams.map((t, i) => ({
+      key: 't' + i,
+      name: t.name || ('Team ' + (i + 1)),
+      city: t.city || '',
+    }));
+    buildTeamRows();
+    render();
+  }
+
   if (IS_SERVED) {
-    // Single init fetch: detect relay availability + check timer config
+    // Single init fetch: detect relay availability + check timer config + teams
     fetch('/api/timer/config')
       .then(r => r.json())
       .then(cfg => {
@@ -251,8 +268,9 @@
         if (Array.isArray(cfg.state) && cfg.state.length === 4) {
           state = cfg.state.slice();
           if (typeof cfg.max === 'number') maxOrders = cfg.max;
-          render();
         }
+        if (Array.isArray(cfg.teams)) applyTeams(cfg.teams);
+        else render();
         const sec = document.getElementById('timer-section');
         sec.style.display = '';
         if (!cfg.configured) {
@@ -264,6 +282,28 @@
         }
       })
       .catch(() => { /* server not running — leave status OFFLINE, timer hidden */ });
+
+    // SSE for real-time score + team updates
+    try {
+      const es = new EventSource('/api/events');
+      es.onmessage = e => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type === 'ffg.orders.state') {
+            if (Array.isArray(msg.state)) { state = msg.state.slice(); }
+            if (typeof msg.max === 'number') maxOrders = msg.max;
+            render();
+          } else if (msg.type === 'ffg.orders') {
+            if (msg.reset) { state = [0, 0, 0, 0]; render(); }
+            else if (typeof msg.team === 'number' && typeof msg.value === 'number') {
+              state[msg.team] = msg.value; render();
+            }
+          } else if (msg.type === 'ffg.teams') {
+            applyTeams(msg.teams);
+          }
+        } catch {}
+      };
+    } catch {}
   }
 </script>
 </body>
