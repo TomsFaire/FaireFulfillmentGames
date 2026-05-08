@@ -230,7 +230,7 @@
     msgEl.textContent = action === 'reset' ? 'resetting…' : action + 'ing…';
     fetch('/api/timer/' + action, { method: 'POST' })
       .then(r => r.json())
-      .then(d => { msgEl.textContent = d.ok ? '' : ('Error: ' + (d.error || 'unknown')); })
+      .then(d => { msgEl.textContent = d.ok ? '' : ('Error: ' + (d.error || d.upstream || 'unknown')); })
       .catch(err => { msgEl.textContent = 'Error: ' + err.message; });
   }
 

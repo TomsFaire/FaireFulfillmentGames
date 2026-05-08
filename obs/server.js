@@ -88,9 +88,10 @@ function stagetimerGet(path, callback) {
 function stagetimerPost(action, callback) {
   const { STAGETIMER_ROOM_ID, STAGETIMER_API_KEY } = ENV;
   if (!STAGETIMER_ROOM_ID || !STAGETIMER_API_KEY) {
-    return callback(new Error('timer not configured'));
+    return callback(new Error('timer not configured — add STAGETIMER_ROOM_ID and STAGETIMER_API_KEY to obs/.env'));
   }
-  const stPath = `/v1/${action}?room_id=${encodeURIComponent(STAGETIMER_ROOM_ID)}&api_key=${encodeURIComponent(STAGETIMER_API_KEY)}`;
+  let stPath = `/v1/${action}?room_id=${encodeURIComponent(STAGETIMER_ROOM_ID)}&api_key=${encodeURIComponent(STAGETIMER_API_KEY)}`;
+  if (timerSettings.timerId) stPath += `&timer_id=${encodeURIComponent(timerSettings.timerId)}`;
   stagetimerGet(stPath, callback);
 }
 
@@ -129,7 +130,7 @@ const server = http.createServer((req, res) => {
 
   // ── Timer config ─────────────────────────────────────────────
   if (req.method === 'GET' && url.pathname === '/api/timer/config') {
-    const configured = !!(ENV.STAGETIMER_ROOM_ID && ENV.STAGETIMER_TIMER_ID && ENV.STAGETIMER_API_KEY);
+    const configured = !!(ENV.STAGETIMER_ROOM_ID && ENV.STAGETIMER_API_KEY);
     return json(res, 200, {
       ok: true, configured,
       roomId:  ENV.STAGETIMER_ROOM_ID  || '',
@@ -227,7 +228,15 @@ const server = http.createServer((req, res) => {
     }
     stagetimerPost(action, (err, status, body) => {
       if (err) return json(res, 503, { ok: false, error: err.message });
-      json(res, status < 300 ? 200 : 502, { ok: status < 300, upstream: body });
+      if (status < 300) return json(res, 200, { ok: true });
+      // Parse upstream error message for better client display
+      let errMsg = 'Stagetimer error ' + status;
+      try {
+        const parsed = JSON.parse(body);
+        if (parsed.message) errMsg = parsed.message;
+        else if (parsed.error) errMsg = parsed.error;
+      } catch (_) { if (body) errMsg += ': ' + String(body).slice(0, 120); }
+      json(res, 502, { ok: false, error: errMsg });
     });
     return;
   }
@@ -294,7 +303,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  const configured = !!(ENV.STAGETIMER_ROOM_ID && ENV.STAGETIMER_TIMER_ID && ENV.STAGETIMER_API_KEY);
+  const configured = !!(ENV.STAGETIMER_ROOM_ID && ENV.STAGETIMER_API_KEY);
   console.log(`FFG server  →  http://localhost:${PORT}`);
   console.log(`Tablet URL  →  http://<this-machine-ip>:${PORT}/control.html`);
   console.log(`Stagetimer  →  ${configured ? 'configured ✓' : 'NOT configured (add obs/.env)'}`);
