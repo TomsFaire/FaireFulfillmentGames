@@ -8,6 +8,36 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="cardboard.css" />
+  <style>
+    /* Score chip — bottom-left corner of wide cam area */
+    .score-chip {
+      position: absolute;
+      left: 100px; bottom: 176px;
+      background: var(--ink);
+      border: 1px solid var(--kraft-light);
+      border-radius: 4px;
+      padding: 10px 20px 12px;
+      font-family: var(--mono);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      z-index: 6;
+    }
+    .score-chip .team-lbl {
+      font-size: 11px; letter-spacing: 0.28em; opacity: 0.6;
+      font-weight: 700; color: var(--cream); margin-bottom: 4px;
+    }
+    .score-chip .score-row {
+      display: flex; align-items: baseline; gap: 6px;
+    }
+    .score-chip .score-row b {
+      font-size: 52px; font-weight: 700;
+      color: var(--kraft-light); line-height: 1;
+    }
+    .score-chip .score-row .mx {
+      font-size: 20px; opacity: 0.5; color: var(--cream);
+    }
+    /* Hide in OBS mode — score chip only shows in preview/non-transparent */
+    body.obs .score-chip { display: none; }
+  </style>
 </head>
 <body>
   <div class="stage" id="stage" data-screen-label="Overlay 1b — Wide Cam Only"></div>
@@ -18,6 +48,7 @@
     (function () {
       const { el, makeFrame, makeTitleBanner, makeTimerChip, autoScale, applyObsMode } = window.OverlayKit;
       const stage = document.getElementById('stage');
+      const TEAMS = window.TEAMS;
 
       // Title banner — top
       const tb = makeTitleBanner();
@@ -47,6 +78,73 @@
       }));
       stage.appendChild(wideWrap);
 
+      // ── Score chip ──────────────────────────────────────────────────
+      // ?team=0|1|2|3  (default 0)
+      const params  = new URLSearchParams(location.search);
+      const teamIdx = Math.max(0, Math.min(3, +(params.get('team') ?? 0)));
+      const team    = TEAMS[teamIdx];
+      let max = 10;
+      let state;
+      try { state = JSON.parse(localStorage.getItem('ffg.orders') || 'null'); } catch (e) {}
+      if (!Array.isArray(state) || state.length !== 4) state = [0, 0, 0, 0];
+
+      const scoreChip = el('div', { cls: 'score-chip' });
+      const teamLbl   = el('div', { cls: 'team-lbl', text: team.name.toUpperCase() });
+      const scoreRow  = el('div', { cls: 'score-row' });
+      const scoreB    = el('b', { text: String(state[teamIdx]) });
+      const scoreMx   = el('span', { cls: 'mx', text: '/ ' + max });
+      scoreRow.appendChild(scoreB);
+      scoreRow.appendChild(scoreMx);
+      scoreChip.appendChild(teamLbl);
+      scoreChip.appendChild(scoreRow);
+      stage.appendChild(scoreChip);
+
+      function render() {
+        scoreB.textContent  = String(Math.max(0, Math.min(max, state[teamIdx])));
+        scoreMx.textContent = '/ ' + max;
+        teamLbl.textContent = TEAMS[teamIdx].name.toUpperCase();
+        try { localStorage.setItem('ffg.orders', JSON.stringify(state)); } catch (e) {}
+      }
+
+      function applyMsg(msg) {
+        if (!msg) return;
+        if (msg.type === 'ffg.orders.state') {
+          if (Array.isArray(msg.state) && msg.state.length === 4) state = msg.state.slice();
+          if (typeof msg.max === 'number') max = msg.max;
+          return render();
+        }
+        if (msg.type !== 'ffg.orders') return;
+        if (msg.reset) { state = [0, 0, 0, 0]; return render(); }
+        let i = -1;
+        if (typeof msg.team === 'number') i = msg.team;
+        if (i < 0 || i > 3) return;
+        if (typeof msg.value === 'number') state[i] = Math.max(0, Math.min(max, msg.value));
+        else if (typeof msg.delta === 'number') state[i] = Math.max(0, Math.min(max, state[i] + msg.delta));
+        render();
+      }
+
+      function applyAny(msg) {
+        if (!msg) return;
+        if (msg.type === 'ffg.teams') {
+          try { localStorage.setItem('ffg.teams', JSON.stringify(msg.teams)); } catch (_) {}
+          location.reload();
+        } else if (msg.type === 'ffg.timer.settings') {
+          Stagetimer.updateSettings(msg.timerSettings || {});
+        } else {
+          applyMsg(msg);
+        }
+      }
+      window.addEventListener('message', (e) => applyAny(e.data));
+      try {
+        const bc = new BroadcastChannel('ffg-orders');
+        bc.onmessage = (e) => applyAny(e.data);
+      } catch (e) {}
+      if (location.protocol !== 'file:') try {
+        const es = new EventSource('/api/events');
+        es.onmessage = (e) => { try { applyAny(JSON.parse(e.data)); } catch (e) {} };
+      } catch (e) {}
+
+      render();
       applyObsMode();
       autoScale();
     })();

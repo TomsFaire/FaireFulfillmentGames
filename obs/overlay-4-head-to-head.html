@@ -92,10 +92,18 @@
         const sub = document.querySelector('.h2h-top .sub'); if (sub) sub.textContent = TWEAKS.subtitle;
       }
 
-      const KEYS = ['sf', 'kw', 'tor', 'nyc'];
       const params = new URLSearchParams(location.search);
-      const leftIdx  = Math.max(0, KEYS.indexOf((params.get('l') || 'sf').toLowerCase()));
-      const rightIdx = Math.max(0, KEYS.indexOf((params.get('r') || 'nyc').toLowerCase()));
+      // Slot-based assignment: ?slot=a|b loads team pair from admin config (ffg.h2h)
+      // Fallback: ?l=0&r=1 numeric indices; default: slot a → [0,1]
+      const slot = (params.get('slot') || 'a').toLowerCase();
+      const h2h  = window.FFGLoadH2H();
+      const slotCfg = h2h[slot] || h2h.a;
+      const leftIdx  = typeof params.get('l') === 'string' && params.get('l') !== null
+                         ? Math.max(0, Math.min(3, +params.get('l')))
+                         : (slotCfg.left  ?? 0);
+      const rightIdx = typeof params.get('r') === 'string' && params.get('r') !== null
+                         ? Math.max(0, Math.min(3, +params.get('r')))
+                         : (slotCfg.right ?? 1);
       const left  = TEAMS[leftIdx];
       const right = TEAMS[rightIdx];
 
@@ -161,12 +169,10 @@
       stage.appendChild(buildCell('right', right));
 
       // ── Score state (shared 4-team store with overlay 3) ────────────
-      const initial = KEYS.map((k, i) => +(params.get(k) ?? 0));
       let max = +(params.get('max') ?? TWEAKS.max);
       let state;
       try { state = JSON.parse(localStorage.getItem('ffg.orders') || 'null'); } catch (e) {}
-      if (!state || state.length !== 4) state = initial;
-      KEYS.forEach((k, i) => { if (params.has(k)) state[i] = initial[i]; });
+      if (!state || state.length !== 4) state = [0, 0, 0, 0];
 
       function render() {
         [['l', leftIdx], ['r', rightIdx]].forEach(([s, idx]) => {
@@ -187,23 +193,39 @@
           return render();
         }
         if (msg.type !== 'ffg.orders') return;
-        if (msg.reset) { state = [...initial]; return render(); }
+        if (msg.reset) { state = [0, 0, 0, 0]; return render(); }
         let i = -1;
         if (typeof msg.team === 'number') i = msg.team;
-        else if (typeof msg.team === 'string') i = KEYS.indexOf(msg.team.toLowerCase());
         if (i < 0 || i > 3) return;
         if (typeof msg.value === 'number') state[i] = Math.max(0, Math.min(max, msg.value));
         else if (typeof msg.delta === 'number') state[i] = Math.max(0, Math.min(max, state[i] + msg.delta));
         render();
       }
-      window.addEventListener('message', (e) => applyMsg(e.data));
+
+      function applyAny(msg) {
+        if (!msg) return;
+        if (msg.type === 'ffg.teams' || msg.type === 'ffg.h2h') {
+          // Team names or H2H assignments changed — update localStorage and reload
+          if (msg.type === 'ffg.teams')
+            try { localStorage.setItem('ffg.teams', JSON.stringify(msg.teams)); } catch (_) {}
+          if (msg.type === 'ffg.h2h')
+            try { localStorage.setItem('ffg.h2h', JSON.stringify(msg.h2h)); } catch (_) {}
+          location.reload();
+        } else if (msg.type === 'ffg.timer.settings') {
+          Stagetimer.updateSettings(msg.timerSettings || {});
+        } else {
+          applyMsg(msg);
+        }
+      }
+
+      window.addEventListener('message', (e) => applyAny(e.data));
       try {
         const bc = new BroadcastChannel('ffg-orders');
-        bc.onmessage = (e) => applyMsg(e.data);
+        bc.onmessage = (e) => applyAny(e.data);
       } catch (e) {}
       if (location.protocol !== 'file:') try {
         const es = new EventSource('/api/events');
-        es.onmessage = (e) => { try { applyMsg(JSON.parse(e.data)); } catch (e) {} };
+        es.onmessage = (e) => { try { applyAny(JSON.parse(e.data)); } catch (e) {} };
       } catch (e) {}
 
       window.FFG = {

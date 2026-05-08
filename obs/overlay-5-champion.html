@@ -119,10 +119,9 @@
       const stage = document.getElementById('stage');
       const TEAMS = window.TEAMS;
 
-      const KEYS = ['sf', 'kw', 'tor', 'nyc'];
       const params = new URLSearchParams(location.search);
-      const winnerKey = (params.get('winner') || 'tor').toLowerCase();
-      const winnerIdx = Math.max(0, KEYS.indexOf(winnerKey));
+      // ?winner= accepts a numeric index 0-3 (default 2)
+      const winnerIdx = Math.max(0, Math.min(3, +(params.get('winner') ?? 2)));
       const winner = TEAMS[winnerIdx];
 
       const max = +(params.get('max') ?? 10);
@@ -168,20 +167,28 @@
         if (msg.reset) { state = [0, 0, 0, 0]; return render(); }
         let i = -1;
         if (typeof msg.team === 'number') i = msg.team;
-        else if (typeof msg.team === 'string') i = KEYS.indexOf(msg.team.toLowerCase());
         if (i < 0 || i > 3) return;
         if (typeof msg.value === 'number') state[i] = Math.max(0, Math.min(max, msg.value));
         else if (typeof msg.delta === 'number') state[i] = Math.max(0, Math.min(max, state[i] + msg.delta));
         render();
       }
-      window.addEventListener('message', (e) => applyMsg(e.data));
+
+      function applyAny(msg) {
+        if (msg && msg.type === 'ffg.teams') {
+          try { localStorage.setItem('ffg.teams', JSON.stringify(msg.teams)); } catch (_) {}
+          location.reload();
+        } else {
+          applyMsg(msg);
+        }
+      }
+      window.addEventListener('message', (e) => applyAny(e.data));
       try {
         const bc = new BroadcastChannel('ffg-orders');
-        bc.onmessage = (e) => applyMsg(e.data);
+        bc.onmessage = (e) => applyAny(e.data);
       } catch (e) {}
       if (location.protocol !== 'file:') try {
         const es = new EventSource('/api/events');
-        es.onmessage = (e) => { try { applyMsg(JSON.parse(e.data)); } catch (e) {} };
+        es.onmessage = (e) => { try { applyAny(JSON.parse(e.data)); } catch (e) {} };
       } catch (e) {}
 
       // ── Wide hero cam ──────────────────────────────────────────────

@@ -2,14 +2,37 @@
    Vanilla JS — no React, no build step. Each overlay HTML file calls
    the helpers it needs after DOMContentLoaded.
 
-   The TEAMS array is the single source of truth across all three files. */
+   Team names are configured via admin.html and stored in localStorage['ffg.teams'].
+   TEAMS below are the hardcoded defaults — used only when no admin config exists. */
 
-window.TEAMS = [
-  { name: 'Team SF',  city: 'SAN FRANCISCO',     code: 'SFO 100', user: '@team_sf'  },
-  { name: 'Team KW',  city: 'KITCHENER-WATERLOO', code: 'YYZ 85',  user: '@team_kw'  },
-  { name: 'Team TOR', city: 'TORONTO',           code: 'TOR 420', user: '@team_tor' },
-  { name: 'Team NYC', city: 'NEW YORK',          code: 'NYC 26',  user: '@team_nyc' },
+const FFG_TEAM_DEFAULTS = [
+  { name: 'Team 1', city: 'CITY 1', code: 'T1', user: '' },
+  { name: 'Team 2', city: 'CITY 2', code: 'T2', user: '' },
+  { name: 'Team 3', city: 'CITY 3', code: 'T3', user: '' },
+  { name: 'Team 4', city: 'CITY 4', code: 'T4', user: '' },
 ];
+
+const FFG_H2H_DEFAULTS = { a: { left: 0, right: 1 }, b: { left: 2, right: 3 } };
+
+function ffgLoadTeams() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('ffg.teams') || 'null');
+    if (Array.isArray(stored) && stored.length === 4) return stored;
+  } catch (e) {}
+  return FFG_TEAM_DEFAULTS.map(t => Object.assign({}, t));
+}
+
+function ffgLoadH2H() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('ffg.h2h') || 'null');
+    if (stored && stored.a && stored.b) return stored;
+  } catch (e) {}
+  return JSON.parse(JSON.stringify(FFG_H2H_DEFAULTS));
+}
+
+window.TEAMS = ffgLoadTeams();
+window.FFGLoadTeams = ffgLoadTeams;
+window.FFGLoadH2H  = ffgLoadH2H;
 
 (function () {
   'use strict';

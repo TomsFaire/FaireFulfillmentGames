@@ -4,37 +4,55 @@ OBS-ready browser-source overlays for the four-team fulfillment livestream. Card
 
 ---
 
+## Overlays
+
+### Four-Up Grid (Overlay 3)
+Live 2×2 grid showing all four teams simultaneously, each with a large order counter.
+
+![Four-Up Grid](screenshots/readme/03-four-up.png)
+
+### Four Portraits (Overlay 2)
+Title / open layout — four teams in tall portrait frames, ideal for the pre-race intro.
+
+![Four Portraits](screenshots/readme/02-four-portrait.png)
+
+### Head-to-Head (Overlay 4)
+Side-by-side matchup layout for semi-finals. Teams and score pills are set from the admin page.
+
+![Head-to-Head](screenshots/readme/04-head-to-head-kw-tor.png)
+
+### Champion Reveal (Overlay 5)
+Winner reveal screen — hero cam frame with a _Faire 1st Place_ stamp and a **DELIVERED** diagonal across the feed.
+
+![Champion Reveal](screenshots/readme/05-champion-sf.png)
+
+---
+
 ## Files
 
 ```
 /
-├── Faire Fulfillment Games Overlays.html   ← Design canvas (preview all 3 in iframes,
-│                                             toggle MASK ONLY / TRANSPARENCY GRID,
-│                                             copy OBS-ready URLs)
+├── Faire Fulfillment Games Overlays.html   ← Design canvas (preview all layouts in iframes)
 ├── overlays.jsx                             ← Source for the canvas previews
 ├── design-canvas.jsx                        ← Pan/zoom canvas component
 └── obs/                                     ← THE FILES OBS LOADS
-    ├── overlay-1-single-pip.html            ← Wide cam + POV PiP
-    ├── overlay-1-wide-only.html             ← Wide cam only (no PiP)
+    ├── admin.html                           ← Admin: set team names, H2H matchups, URL guide
+    ├── control.html                         ← Tablet score controller (served by server.js)
+    ├── overlay-1-single-pip.html            ← Wide cam + POV PiP + score chip (?team=0–3)
+    ├── overlay-1-wide-only.html             ← Wide cam only + score chip (?team=0–3)
     ├── overlay-2-four-portrait.html         ← Title / open — four portraits
     ├── overlay-3-four-up.html               ← Live four-up grid w/ order counters
-    ├── overlay-4-head-to-head.html          ← Two-team matchup w/ live scores (?l=sf&r=nyc)
-    ├── overlay-4-head-to-head-kw-tor.html   ← Preset: KW vs TOR
-    ├── overlay-5-champion.html              ← Winner reveal — single hero cam (?winner=tor)
-    ├── overlay-5-champion-sf.html           ← Preset: SF wins
-    ├── overlay-5-champion-kw.html           ← Preset: KW wins
-    ├── overlay-5-champion-tor.html          ← Preset: TOR wins
-    ├── overlay-5-champion-nyc.html          ← Preset: NYC wins
-    ├── control.html                         ← Tablet score controller (served by server.js)
-    ├── server.js                            ← Relay server: serves obs/, score API, SSE, timer proxy
+    ├── overlay-4-head-to-head.html          ← Two-team matchup (?slot=a|b from admin config)
+    ├── overlay-5-champion.html              ← Winner reveal — single hero cam (?winner=0–3)
+    ├── server.js                            ← Relay server: serves obs/, score+team API, SSE, timer proxy
     ├── start.sh                             ← Convenience launcher: `bash obs/start.sh`
     ├── .env.example                         ← Stagetimer credential template (copy → .env, never commit)
     ├── cardboard.css                        ← Shared styles
-    ├── overlay-kit.js                       ← Shared markup helpers (TEAMS array lives here)
+    ├── overlay-kit.js                       ← Shared markup helpers, dynamic team loader
     └── stagetimer.js                        ← Live SHIP-BY clock binding
 ```
 
-The single source of truth for **team names, cities, codes, handles** is the `TEAMS` constant at the top of `obs/overlay-kit.js`. Edit it there and all overlays update.
+**Team names, cities, codes, and presenter handles** are configured via `obs/admin.html` and stored in `localStorage['ffg.teams']`. The admin page broadcasts changes to all open overlays via SSE (server) or BroadcastChannel (same-machine), causing them to reload instantly with the new names. Teams are referenced by index (0–3), not by name — Team 1 always shows Score 1.
 
 ---
 
@@ -133,17 +151,21 @@ For each overlay add a **Browser Source** in OBS:
 
 | Overlay | Description | URL |
 |---|---|---|
-| Overlay 1 | Wide cam + POV PiP | `http://localhost:3000/overlay-1-single-pip.html?obs=1` |
-| Overlay 1b | Wide cam only (no PiP) | `http://localhost:3000/overlay-1-wide-only.html?obs=1` |
+| Overlay 1 | Wide cam + PiP + score — Team 1 | `http://localhost:3000/overlay-1-single-pip.html?team=0&obs=1` |
+| Overlay 1 | Wide cam + PiP + score — Team 2 | `http://localhost:3000/overlay-1-single-pip.html?team=1&obs=1` |
+| Overlay 1 | Wide cam + PiP + score — Team 3 | `http://localhost:3000/overlay-1-single-pip.html?team=2&obs=1` |
+| Overlay 1 | Wide cam + PiP + score — Team 4 | `http://localhost:3000/overlay-1-single-pip.html?team=3&obs=1` |
+| Overlay 1b | Wide cam only + score — Team 1 | `http://localhost:3000/overlay-1-wide-only.html?team=0&obs=1` |
 | Overlay 2 | Title / four portraits | `http://localhost:3000/overlay-2-four-portrait.html?obs=1` |
 | Overlay 3 | Live four-up + order counters | `http://localhost:3000/overlay-3-four-up.html?obs=1` |
-| Overlay 4 | Head-to-head (SF vs NYC default) | `http://localhost:3000/overlay-4-head-to-head.html?obs=1` |
-| Overlay 4 KW/TOR | Head-to-head KW vs TOR preset | `http://localhost:3000/overlay-4-head-to-head-kw-tor.html?obs=1` |
-| Overlay 5 | Champion reveal (TOR default) | `http://localhost:3000/overlay-5-champion.html?obs=1` |
-| Overlay 5 SF | Champion — SF wins | `http://localhost:3000/overlay-5-champion-sf.html?obs=1` |
-| Overlay 5 KW | Champion — KW wins | `http://localhost:3000/overlay-5-champion-kw.html?obs=1` |
-| Overlay 5 TOR | Champion — TOR wins | `http://localhost:3000/overlay-5-champion-tor.html?obs=1` |
-| Overlay 5 NYC | Champion — NYC wins | `http://localhost:3000/overlay-5-champion-nyc.html?obs=1` |
+| Overlay 4A | Head-to-head — Slot A (set in admin) | `http://localhost:3000/overlay-4-head-to-head.html?slot=a&obs=1` |
+| Overlay 4B | Head-to-head — Slot B (set in admin) | `http://localhost:3000/overlay-4-head-to-head.html?slot=b&obs=1` |
+| Overlay 5 | Champion reveal — Team 1 | `http://localhost:3000/overlay-5-champion.html?winner=0` |
+| Overlay 5 | Champion reveal — Team 2 | `http://localhost:3000/overlay-5-champion.html?winner=1` |
+| Overlay 5 | Champion reveal — Team 3 | `http://localhost:3000/overlay-5-champion.html?winner=2` |
+| Overlay 5 | Champion reveal — Team 4 | `http://localhost:3000/overlay-5-champion.html?winner=3` |
+
+**Tip:** The **Admin page** (`http://localhost:3000/admin.html`) shows a live URL guide with team names pre-filled into the descriptions.
 
 Replace `?obs=1` with any of the chroma-key flags below:
 
@@ -174,20 +196,16 @@ Two-team side-by-side layout for semi-finals or head-to-head matchups. Each team
 
 ### Teams and score
 
-Pick any two teams via URL:
+Teams are assigned via the **Admin page** (`/admin.html`) using Slot A and Slot B. The overlay reads from `localStorage['ffg.h2h']` on load and reloads automatically if the matchup is changed in admin.
 
 | URL param | Default | Description |
 |---|---|---|
-| `?l=` | `sf` | Left team key (`sf`, `kw`, `tor`, `nyc`) |
-| `?r=` | `nyc` | Right team key |
+| `?slot=` | `a` | Slot `a` or `b` — loads the team pair configured in admin |
 | `?max=` | `10` | Target / denominator shown in score pills |
-| `?sf=`, `?kw=`, etc. | `0` | Seed a team's starting score |
+| `?l=` | *(slot config)* | Override left team index (0–3) |
+| `?r=` | *(slot config)* | Override right team index (0–3) |
 
-Score state is the **same shared `localStorage['ffg.orders']` store as Overlay 3** — bump scores on the tablet controller and both overlays update simultaneously. All the same control methods work: tablet controller, `FFG.bump()` / `FFG.set()` in the browser console, Companion HTTP, or postMessage.
-
-### Preset files
-
-`overlay-4-head-to-head-kw-tor.html` redirects to the main file with `?l=kw&r=tor` pre-set. Use preset files for OBS Browser Sources that are hard to edit mid-show. Add your own by copying the pattern.
+Score state is the **same shared `localStorage['ffg.orders']` store as Overlay 3** — bump scores on the tablet controller and both overlays update simultaneously. The SHIP-BY timer is driven by Stagetimer (same as Overlays 1 and 3) and is controlled from `control.html`.
 
 ---
 
@@ -209,13 +227,11 @@ The final score chip shows the winner's live order count from the **same shared 
 
 | URL param | Default | Description |
 |---|---|---|
-| `?winner=` | `tor` | Winning team key (`sf`, `kw`, `tor`, `nyc`) |
+| `?winner=` | `2` | Winning team index `0`–`3` (matches slot in admin) |
 | `?final=` | *(live score)* | Optional: seed the winner's score to a specific number on load |
 | `?max=` | `10` | Target / denominator |
 
-### Preset files
-
-Four team presets (`-sf`, `-kw`, `-tor`, `-nyc`) redirect to the main file with the winner pre-set. In OBS, add all four as separate Browser Sources and toggle visibility to reveal the winner without touching URLs mid-show.
+In OBS, add one Browser Source per team (e.g. `?winner=0`, `?winner=1`, `?winner=2`, `?winner=3`) and toggle scene/source visibility to reveal the winner without touching URLs mid-show. The score and team name update automatically from the shared store.
 
 ---
 
@@ -257,28 +273,31 @@ Polls every ~1s with drift correction. Status pill on the chip shows `OFFLINE` /
 
 ---
 
-## Score counters (overlays 3, 4, and 5)
+## Score counters (overlays 1, 3, 4, and 5)
 
-All three score-bearing overlays share a single source of truth: `localStorage['ffg.orders']` — a four-element array `[sf, kw, tor, nyc]`. Update it in one place and every open overlay reflects it instantly.
+All score-bearing overlays share a single source of truth: `localStorage['ffg.orders']` — a four-element array indexed 0–3. Update it in one place and every open overlay reflects it instantly.
 
+- **Overlay 1 (single-pip / wide-only)** — shows the selected team's score as a chip bottom-left (`?team=0|1|2|3`)
 - **Overlay 3** — shows all four teams' order counts as large chips in a 2×2 grid
-- **Overlay 4** — shows the two competing teams' counts as pills in the header banner
+- **Overlay 4** — shows the two competing teams' counts as pills in the header banner; driven by Stagetimer for the clock
 - **Overlay 5** — shows the winner's final count in the kicker chip
 
-### Team keys
+### Team indices
 
-| Key | Team |
+Teams are numbered 0–3 matching the slots in the Admin page. Names are set in admin and persist in `localStorage['ffg.teams']`.
+
+| Index | Default name |
 |---|---|
-| `sf` (or `0`) | Team SF |
-| `kw` (or `1`) | Team KW |
-| `tor` (or `2`) | Team TOR |
-| `nyc` (or `3`) | Team NYC |
+| `0` | Team 1 |
+| `1` | Team 2 |
+| `2` | Team 3 |
+| `3` | Team 4 |
 
 Counter values persist in `localStorage` — a Companion "refresh page" button doesn't wipe them.
 
 ### Method 1 — Tablet controller via relay server (recommended for live shows)
 
-Start `obs/server.js` on the OBS machine (see Score controller setup above), then open `http://<obs-machine-ip>:3000/control.html` on any tablet or phone on the same WiFi. Big +/− buttons per team, RESET ALL, Goal field, and SHIP-BY timer controls.
+Start `obs/server.js` on the OBS machine (see Score controller setup above), then open `http://<obs-machine-ip>:3000/control.html` on any tablet or phone on the same WiFi. Big +/− buttons per team (showing current team names), RESET ALL, Goal field, and SHIP-BY timer controls. The team names update automatically from the admin page.
 
 Score changes flow: tablet → `POST /api/orders/bump` → server → SSE → all open overlays simultaneously. No page refresh needed. The status pill shows **LIVE** when the server is reachable.
 
@@ -289,24 +308,23 @@ Falls back to **BroadcastChannel** if the server is unreachable and both pages h
 Seed scores via URL params and trigger an OBS "Refresh browser source" action:
 
 ```
-http://localhost:3000/overlay-3-four-up.html?obs=1&sf=8&kw=6&tor=9&nyc=7
-http://localhost:3000/overlay-4-head-to-head.html?obs=1&sf=8&nyc=6
-http://localhost:3000/overlay-5-champion.html?obs=1&winner=sf&final=10
+http://localhost:3000/overlay-3-four-up.html?obs=1&0=8&1=6&2=9&3=7
+http://localhost:3000/overlay-5-champion.html?obs=1&winner=0&final=10
 ```
 
-Optional `&max=12` to change the denominator. Use with an OBS "Refresh browser source" action.
+Optional `&max=12` to change the denominator.
 
 ### Method 3 — Companion → OBS "Execute JavaScript on browser source" (cleanest, no reload)
 
 Each Companion button fires one JS expression on the browser source. Works on overlays 3, 4, and 5 — `window.FFG` is exposed on all of them:
 
 ```js
-FFG.bump('sf', 1)      // +1 for Team SF
-FFG.bump('sf', -1)     // -1 for Team SF
-FFG.set('kw', 8)       // hard-set Team KW to 8
-FFG.set('tor', 0)      // zero Team TOR
-FFG.reset()            // zero everything
-FFG.state()            // returns current state, e.g. [7,5,8,6]
+FFG.bump(0, 1)     // +1 for Team 1 (index 0)
+FFG.bump(0, -1)    // -1 for Team 1
+FFG.set(1, 8)      // hard-set Team 2 to 8
+FFG.set(2, 0)      // zero Team 3
+FFG.reset()        // zero everything
+FFG.state()        // returns current state, e.g. [7,5,8,6]
 ```
 
 ### Method 4 — postMessage (for embedding in another page)
@@ -315,10 +333,10 @@ If the overlay is in an iframe of a larger control surface:
 
 ```js
 overlayIframe.contentWindow.postMessage(
-  { type: 'ffg.orders', team: 'sf', delta: 1 }, '*'
+  { type: 'ffg.orders', team: 0, delta: 1 }, '*'
 );
 overlayIframe.contentWindow.postMessage(
-  { type: 'ffg.orders', team: 'kw', value: 8 }, '*'
+  { type: 'ffg.orders', team: 1, value: 8 }, '*'
 );
 overlayIframe.contentWindow.postMessage(
   { type: 'ffg.orders', reset: true }, '*'
@@ -327,18 +345,31 @@ overlayIframe.contentWindow.postMessage(
 
 ---
 
+## Admin page
+
+Open `http://localhost:3000/admin.html` (or `http://<obs-machine-ip>:3000/admin.html`) to configure teams and matchups.
+
+### Teams
+
+Fill in Name, City/Location, Short Code, and Presenter/User for each slot. Click **SAVE TEAMS** — all open overlays on the machine reload within a second with the new names applied. The relay server broadcasts the update to tablets and other devices on the LAN too.
+
+### Head-to-Head matchups
+
+Two matchup slots (A and B) can each be assigned any two teams. Overlay 4 loaded with `?slot=a` or `?slot=b` picks up the assigned pair. After changing an assignment, click **SAVE MATCHUPS** — Overlay 4 reloads automatically.
+
+### URL guide
+
+The bottom of the admin page shows every OBS Browser Source URL with the current team names pre-filled in the labels, so you can quickly identify which URL to paste for each scene.
+
+---
+
 ## Customization
 
 ### Change team names / cities / handles
 
-Edit `TEAMS` at the top of `obs/overlay-kit.js`. All three overlays read from it.
+Use the **Admin page** (`/admin.html`) — changes propagate to all overlays instantly. No file editing required.
 
-```js
-window.TEAMS = [
-  { name: 'Team SF',  city: 'SAN FRANCISCO',     code: 'SFO-01', user: '@team_sf'  },
-  // ...
-];
-```
+For offline/file-based use only, you can also edit `FFG_TEAM_DEFAULTS` at the top of `obs/overlay-kit.js`.
 
 ### Change the show name / banner copy
 

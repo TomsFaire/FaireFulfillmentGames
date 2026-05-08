@@ -86,19 +86,18 @@
       stage.appendChild(top);
 
       // ── Order-counter state (controllable from URL params, postMessage, or BroadcastChannel)
-      // URL keys: sf, kw, tor, nyc (and 0,1,2,3 as aliases). max= for the denominator.
-      // Companion: HTTP GET https://…/overlay-3-four-up.html?obs=1&sf=8&kw=6&tor=9&nyc=7
-      // Live (no reload): postMessage({type:'ffg.orders', team:'sf', value:8})  or  ({type:'ffg.orders', delta:1, team:'kw'})
-      const KEYS = ['sf', 'kw', 'tor', 'nyc'];
+      // URL params: 0=N, 1=N, 2=N, 3=N (team indices). max= for the denominator.
+      // Companion: HTTP GET https://…/overlay-3-four-up.html?obs=1&0=8&1=6&2=9&3=7
+      // Live (no reload): postMessage({type:'ffg.orders', team:0, value:8})  or  ({type:'ffg.orders', delta:1, team:2})
       const params = new URLSearchParams(window.location.search);
-      const initial = KEYS.map((k, i) => +(params.get(k) ?? params.get(String(i)) ?? [7,5,8,6][i]));
+      const initial = [0,1,2,3].map(i => +(params.get(String(i)) ?? [7,5,8,6][i]));
       let max = +(params.get('max') ?? 10);
       // Persist across reloads so a Companion "refresh page" button doesn't reset values
       let state;
       try { state = JSON.parse(localStorage.getItem('ffg.orders') || 'null'); } catch (e) {}
       if (!state || state.length !== 4) state = initial;
       // URL params always win on first load if explicitly set
-      KEYS.forEach((k, i) => { if (params.has(k) || params.has(String(i))) state[i] = initial[i]; });
+      [0,1,2,3].forEach(i => { if (params.has(String(i))) state[i] = initial[i]; });
 
       // 2x2 grid
       const cellW = 912, cellH = 431;
@@ -121,7 +120,7 @@
           resLabel: 'WIDE',
           placeholderLabel: `CAM ${i+1} · ${tm.name.toUpperCase()}`,
         }));
-        const oc = el('div', { cls: 'order-chip', attrs: { 'data-team': KEYS[i] } });
+        const oc = el('div', { cls: 'order-chip', attrs: { 'data-team': String(i) } });
         cell.appendChild(oc);
         chips.push(oc);
         grid.appendChild(cell);
@@ -149,22 +148,32 @@
         if (msg.reset) { state = [...initial]; return render(); }
         let i = -1;
         if (typeof msg.team === 'number') i = msg.team;
-        else if (typeof msg.team === 'string') i = KEYS.indexOf(msg.team.toLowerCase());
         if (i < 0 || i > 3) return;
         if (typeof msg.value === 'number') state[i] = Math.max(0, Math.min(max, msg.value));
         else if (typeof msg.delta === 'number') state[i] = Math.max(0, Math.min(max, state[i] + msg.delta));
         render();
       }
-      window.addEventListener('message', (e) => applyMsg(e.data));
+      function applyAny(msg) {
+        if (!msg) return;
+        if (msg.type === 'ffg.teams') {
+          try { localStorage.setItem('ffg.teams', JSON.stringify(msg.teams)); } catch (_) {}
+          location.reload();
+        } else if (msg.type === 'ffg.timer.settings') {
+          Stagetimer.updateSettings(msg.timerSettings || {});
+        } else {
+          applyMsg(msg);
+        }
+      }
+      window.addEventListener('message', (e) => applyAny(e.data));
       try {
         const bc = new BroadcastChannel('ffg-orders');
-        bc.onmessage = (e) => applyMsg(e.data);
+        bc.onmessage = (e) => applyAny(e.data);
       } catch (e) {}
 
       // SSE relay from server.js (active when served via localhost:3000)
       if (location.protocol !== 'file:') try {
         const es = new EventSource('/api/events');
-        es.onmessage = (e) => { try { applyMsg(JSON.parse(e.data)); } catch (e) {} };
+        es.onmessage = (e) => { try { applyAny(JSON.parse(e.data)); } catch (_) {} };
       } catch (e) {}
 
       // Expose for in-page console / Companion "Browser Source → execute JS"
