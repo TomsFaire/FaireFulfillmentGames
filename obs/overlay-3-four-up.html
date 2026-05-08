@@ -120,7 +120,7 @@
           resLabel: 'WIDE',
           placeholderLabel: `CAM ${i+1} · ${tm.name.toUpperCase()}`,
         }));
-        const oc = el('div', { cls: 'order-chip', attrs: { 'data-team': KEYS[i] } });
+        const oc = el('div', { cls: 'order-chip', attrs: { 'data-team': String(i) } });
         cell.appendChild(oc);
         chips.push(oc);
         grid.appendChild(cell);
