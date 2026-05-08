@@ -39,8 +39,8 @@ window.FFGLoadH2H  = ffgLoadH2H;
 
   // Computed once at script load, before any makeFrame() calls, so the check
   // is reliable regardless of when applyObsMode() runs.
-  const IS_OBS = new URLSearchParams(window.location.search).get('obs') === '1' ||
-                 new URLSearchParams(window.location.search).get('obs') === 'true';
+  const _obsParam = new URLSearchParams(window.location.search).get('obs');
+  const IS_OBS = _obsParam === '1' || _obsParam === 'true' || _obsParam === '2';
 
   function el(tag, opts = {}, children = []) {
     const n = document.createElement(tag);
@@ -246,6 +246,7 @@ window.FFGLoadH2H  = ffgLoadH2H;
 
   /* OBS mode toggle.
      ?obs=1      → transparent cam windows + transparent bg (composite in OBS)
+     ?obs=2      → opaque cardboard bg everywhere except cam windows (transparent cam holes)
      ?obs=green  → green (#00ff00) cam windows, transparent bg
      ?obs=green2 → green cam windows + green bg (full green field)
      ?obs=blue   → blue (#0000ff) cam windows, transparent bg
@@ -253,13 +254,166 @@ window.FFGLoadH2H  = ffgLoadH2H;
   function applyObsMode() {
     const p = new URLSearchParams(window.location.search);
     const obs = p.get('obs');
-    const map = { '1': 'obs', 'true': 'obs', green: 'obs-green', green2: 'obs-green2', blue: 'obs-blue', blue2: 'obs-blue2' };
+    const map = { '1': 'obs', 'true': 'obs', '2': 'obs-2', green: 'obs-green', green2: 'obs-green2', blue: 'obs-blue', blue2: 'obs-blue2' };
     let cls = map[obs] || (p.get('preview') === '0' ? 'obs' : null);
     if (!cls && (p.get('key') === '1' || obs === 'key')) cls = 'key';
     if (cls) document.body.classList.add(cls);
+    if (obs === '2') requestAnimationFrame(buildObsBg);
+  }
+
+  /* Build full-page opaque cardboard background with transparent camera holes.
+     Called automatically by applyObsMode() when ?obs=2. Reads camera positions
+     from the live DOM so works for every overlay layout without per-file changes. */
+  function buildObsBg() {
+    const stage = document.querySelector('.stage');
+    if (!stage) return;
+
+    // Collect every camera window's position in stage-local coordinates.
+    // getBoundingClientRect gives viewport pixels; divide by the stage's
+    // CSS scale factor to recover the unscaled 1920×1080 coordinate space.
+    const stageRect = stage.getBoundingClientRect();
+    const scale = stageRect.width / 1920;
+    const holes = [];
+    document.querySelectorAll('.frame.cardboard').forEach(frame => {
+      const camEl = frame.querySelector('.cam');
+      if (!camEl) return;
+      const r = camEl.getBoundingClientRect();
+      holes.push({
+        x: (r.left   - stageRect.left) / scale,
+        y: (r.top    - stageRect.top)  / scale,
+        w: r.width  / scale,
+        h: r.height / scale,
+      });
+    });
+
+    // Build even-odd clip-path: outer full-canvas rect minus each camera hole.
+    // Holes are wound in the opposite direction so they subtract (even-odd rule).
+    const outer = 'M0,0 H1920 V1080 H0 Z';
+    const holePaths = holes.map(h =>
+      `M${h.x + h.w},${h.y} H${h.x} V${h.y + h.h} H${h.x + h.w} Z`
+    ).join(' ');
+
+    const layer = document.createElement('div');
+    layer.className = 'obs-bg-layer';
+    layer.style.clipPath = `path(evenodd, '${outer} ${holePaths}')`;
+
+    addObsDecorations(layer);
+
+    // Insert behind all overlay content
+    stage.insertBefore(layer, stage.firstChild);
+  }
+
+  const _CORE_VALUES = [
+    { file: 'One_Faire_color.png',              label: 'One Faire' },
+    { file: 'Make_it_happen_(fast)_color.png',  label: 'Make It Happen (Fast)' },
+    { file: 'Seek_the_truth_color.png',         label: 'Seek the Truth' },
+    { file: 'Raise_the_bar_color.png',          label: 'Raise the Bar' },
+    { file: 'Serve_our_community_color.png',    label: 'Serve Our Community' },
+  ];
+
+  // Sticker positions chosen to fall in the safe zones that are never
+  // covered by camera windows in any of the five overlay layouts.
+  // Safe zones: left strip (x<56), right strip (x>1864), top band (y<140),
+  // bottom band (y>965).
+  const _STICKER_PLACEMENTS = [
+    { x: 28,   y: 22,  rot:  6 },   // top-left corner
+    { x: 1798, y: 18,  rot: -5 },   // top-right corner
+    { x: 8,    y: 340, rot: 90 },   // left edge, upper-mid
+    { x: 1836, y: 490, rot: -90 },  // right edge, mid
+    { x: 28,   y: 972, rot: -7 },   // bottom-left corner
+  ];
+
+  function addObsDecorations(layer) {
+    const iconsBase = 'icons/';
+
+    // ── Core Values stickers ────────────────────────────────────────
+    _CORE_VALUES.forEach((cv, i) => {
+      const pl = _STICKER_PLACEMENTS[i];
+      const sticker = document.createElement('div');
+      sticker.className = 'obs-sticker';
+      sticker.style.cssText = `left:${pl.x}px;top:${pl.y}px;transform:rotate(${pl.rot}deg);`;
+      const img = document.createElement('img');
+      img.src = iconsBase + cv.file;
+      img.alt = cv.label;
+      sticker.appendChild(img);
+      layer.appendChild(sticker);
+    });
+
+    // ── FRAGILE stamp — left edge, vertical ─────────────────────────
+    const fragile = document.createElement('div');
+    fragile.className = 'obs-stamp';
+    fragile.style.cssText = 'left:6px;top:600px;transform:rotate(90deg);transform-origin:left center;';
+    fragile.innerHTML = '⚠ FRAGILE ⚠';
+    layer.appendChild(fragile);
+
+    // ── THIS SIDE UP — right edge, vertical ─────────────────────────
+    const sideUp = document.createElement('div');
+    sideUp.className = 'obs-stamp';
+    sideUp.style.cssText = 'right:6px;top:250px;transform:rotate(-90deg);transform-origin:right center;';
+    sideUp.innerHTML = '↑ THIS SIDE UP ↑';
+    layer.appendChild(sideUp);
+
+    // ── HANDLE WITH CARE — lower-left ───────────────────────────────
+    const handle = document.createElement('div');
+    handle.className = 'obs-stamp obs-stamp--faded';
+    handle.style.cssText = 'left:18px;top:820px;transform:rotate(-12deg);font-size:10px;';
+    handle.innerHTML = 'HANDLE<br>WITH CARE';
+    layer.appendChild(handle);
+
+    // ── Torn shipping label — top centre ───────────────────────────
+    const label = document.createElement('div');
+    label.className = 'obs-shipping-label';
+    label.innerHTML = _buildShippingLabelHTML();
+    layer.appendChild(label);
+
+    // ── Tracking barcode — bottom right ─────────────────────────────
+    const trackWrap = document.createElement('div');
+    trackWrap.className = 'obs-tracking';
+    trackWrap.innerHTML = _buildTrackingHTML();
+    layer.appendChild(trackWrap);
+  }
+
+  function _buildShippingLabelHTML() {
+    const bars = [2,1,3,1,2,1,1,3,1,2,1,2,1,3,1,1,2,1,3,1,2,1,1,2,3,1];
+    const barSvg = bars.map(w =>
+      `<rect width="${w}" height="28" fill="#2b2622"/>`
+    ).reduce((acc, r, i) => {
+      const x = bars.slice(0, i).reduce((s, w) => s + w + 1, 0);
+      return acc + r.replace('rect', `rect x="${x}"`);
+    }, '');
+    const totalW = bars.reduce((s, w) => s + w + 1, 0);
+
+    return `
+      <div class="obs-shipping-label__header">
+        <svg width="${totalW}" height="28" viewBox="0 0 ${totalW} 28">${barSvg}</svg>
+        <span class="obs-shipping-label__track">1Z9F4A0R3E574I52</span>
+      </div>
+      <div class="obs-shipping-label__from">
+        <span class="obs-shipping-label__key">FROM:</span>
+        FAIRE INC · 100 FIRST ST<br>
+        SAN FRANCISCO CA 94105
+      </div>
+      <div class="obs-shipping-label__to">
+        <span class="obs-shipping-label__key">TO:</span>
+        FULFILLMENT GAMES 2026<br>
+        OPERATIONS · STAGE FLOOR
+      </div>`;
+  }
+
+  function _buildTrackingHTML() {
+    const bars = [3,1,2,1,1,3,2,1,1,2,3,1,2,1,1,3,1,2,1,3,2,1,1,2];
+    let x = 0;
+    const rects = bars.map(w => {
+      const r = `<rect x="${x}" y="0" width="${w}" height="44" fill="#2b2622"/>`;
+      x += w + 1;
+      return r;
+    }).join('');
+    return `
+      <svg width="${x}" height="44" viewBox="0 0 ${x} 44">${rects}</svg>
+      <div class="obs-tracking__label">FFG-2026-TRACK</div>`;
   }
 
   window.OverlayKit = {
-    el, makeFrame, makeTitleBanner, makeStamp, makeTimerChip, autoScale, applyObsMode,
+    el, makeFrame, makeTitleBanner, makeStamp, makeTimerChip, autoScale, applyObsMode, buildObsBg,
   };
 })();
