@@ -228,17 +228,21 @@ const server = http.createServer((req, res) => {
     if (!['start', 'stop', 'reset'].includes(action)) {
       return json(res, 400, { ok: false, error: 'unknown timer action' });
     }
+    // Respond immediately so the control surface feels instant; Stagetimer
+    // round-trips can take 1–4 s and the result is visible on-screen anyway.
+    const { STAGETIMER_ROOM_ID, STAGETIMER_API_KEY } = ENV;
+    if (!STAGETIMER_ROOM_ID || !STAGETIMER_API_KEY) {
+      return json(res, 503, { ok: false, error: 'timer not configured — add STAGETIMER_ROOM_ID and STAGETIMER_API_KEY to obs/.env' });
+    }
+    json(res, 200, { ok: true });
+    // Fire-and-forget — log errors to console but don't block the client
     stagetimerPost(action, (err, status, body) => {
-      if (err) return json(res, 503, { ok: false, error: err.message });
-      if (status < 300) return json(res, 200, { ok: true });
-      // Parse upstream error message for better client display
-      let errMsg = 'Stagetimer error ' + status;
-      try {
-        const parsed = JSON.parse(body);
-        if (parsed.message) errMsg = parsed.message;
-        else if (parsed.error) errMsg = parsed.error;
-      } catch (_) { if (body) errMsg += ': ' + String(body).slice(0, 120); }
-      json(res, 502, { ok: false, error: errMsg });
+      if (err) { console.error('[timer]', action, err.message); return; }
+      if (status >= 300) {
+        let errMsg = 'status ' + status;
+        try { const p = JSON.parse(body); errMsg = p.message || p.error || errMsg; } catch (_) {}
+        console.error('[timer]', action, errMsg);
+      }
     });
     return;
   }
