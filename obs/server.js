@@ -112,8 +112,10 @@ const server = http.createServer((req, res) => {
     clients.push(res);
     // Send full state snapshot on connect so overlay syncs immediately
     res.write(`data: ${JSON.stringify({ type: 'ffg.orders.state', state: state.slice(), max: maxOrders })}\n\n`);
-    res.write(`data: ${JSON.stringify({ type: 'ffg.teams', teams })}\n\n`);
-    res.write(`data: ${JSON.stringify({ type: 'ffg.h2h', h2h })}\n\n`);
+    // NOTE: do NOT send ffg.teams or ffg.h2h here — overlays call location.reload()
+    // on those messages, which would cause an infinite reload loop on every SSE connect.
+    // Teams/H2H are read from localStorage (set by overlay-kit.js defaults or prior saves).
+    // They are only broadcast when actively changed via /api/teams or /api/h2h.
     res.write(`data: ${JSON.stringify({ type: 'ffg.timer.settings', timerSettings })}\n\n`);
     const ping = setInterval(() => {
       try { res.write(': ping\n\n'); } catch {
