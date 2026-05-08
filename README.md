@@ -6,25 +6,30 @@ OBS-ready browser-source overlays for the four-team fulfillment livestream. Card
 
 ## Overlays
 
-### Four-Up Grid (Overlay 3)
-Live 2×2 grid showing all four teams simultaneously, each with a large order counter.
+### Single Cam + PiP (Overlay 1)
+Wide cam with a PiP inset and live order counter. Use `?team=0–3` to assign a team.
 
-![Four-Up Grid](screenshots/readme/03-four-up.png)
+![Single Cam + PiP](screenshots/readme/01-single-pip.png)
 
 ### Four Portraits (Overlay 2)
 Title / open layout — four teams in tall portrait frames, ideal for the pre-race intro.
 
 ![Four Portraits](screenshots/readme/02-four-portrait.png)
 
+### Four-Up Grid (Overlay 3)
+Live 2×2 grid showing all four teams simultaneously, each with a large order counter.
+
+![Four-Up Grid](screenshots/readme/03-four-up.png)
+
 ### Head-to-Head (Overlay 4)
 Side-by-side matchup layout for semi-finals. Teams and score pills are set from the admin page.
 
-![Head-to-Head](screenshots/readme/04-head-to-head-kw-tor.png)
+![Head-to-Head](screenshots/readme/04-head-to-head.png)
 
 ### Champion Reveal (Overlay 5)
 Winner reveal screen — hero cam frame with a _Faire 1st Place_ stamp and a **DELIVERED** diagonal across the feed.
 
-![Champion Reveal](screenshots/readme/05-champion-sf.png)
+![Champion Reveal](screenshots/readme/05-champion.png)
 
 ---
 
