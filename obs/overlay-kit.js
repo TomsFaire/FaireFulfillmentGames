@@ -295,7 +295,7 @@ window.FFGLoadH2H  = ffgLoadH2H;
 
     const layer = document.createElement('div');
     layer.className = 'obs-bg-layer';
-    layer.style.clipPath = `path(evenodd, '${outer} ${holePaths}')`;
+    layer.style.clipPath = `path('${outer} ${holePaths}')`;
 
     addObsDecorations(layer);
 
