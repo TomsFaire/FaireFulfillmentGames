@@ -97,6 +97,22 @@
   .url-table a { color:var(--kraft); text-decoration:none; }
   .url-table a:hover { text-decoration:underline; }
 
+  /* Timer settings */
+  .ts-row { display:flex; align-items:center; gap:10px; }
+  .ts-row label { font-size:12px; opacity:.7; flex-shrink:0; min-width:56px; }
+  .ts-row select {
+    flex:1; padding:8px 10px; border:1px solid var(--kraft-deep);
+    border-radius:4px; background:#1a1816; color:var(--cream);
+    font-family:'Inter',sans-serif; font-size:13px; appearance:none;
+  }
+  .ts-row select:focus { outline:none; border-color:var(--kraft); }
+  .ts-toggle {
+    display:flex; align-items:center; gap:8px; font-size:12px; opacity:.7;
+    cursor:pointer; user-select:none;
+  }
+  .ts-toggle input[type=checkbox] { accent-color:var(--kraft); width:16px; height:16px; cursor:pointer; }
+  .timer-unconfigured { font-size:12px; color:var(--kraft); opacity:.6; font-style:italic; }
+
   /* Save button */
   .btn-save {
     background:var(--green); color:#fff; border:none; border-radius:6px;
@@ -145,6 +161,23 @@
   <div id="h2h-rows"></div>
   <button class="btn-save" id="btn-save-h2h">SAVE MATCHUPS</button>
   <div class="save-msg" id="h2h-msg"></div>
+</div>
+
+<!-- Clock settings -->
+<div class="section" id="clock-section" style="display:none">
+  <div class="section-label">CLOCK SETTINGS</div>
+  <div class="ts-row">
+    <label for="timer-select">Timer</label>
+    <select id="timer-select">
+      <option value="">— default (active timer) —</option>
+    </select>
+  </div>
+  <label class="ts-toggle">
+    <input type="checkbox" id="ms-toggle" />
+    Show milliseconds (tenths of a second)
+  </label>
+  <button class="btn-save" id="btn-save-clock">SAVE CLOCK</button>
+  <div class="save-msg" id="clock-msg"></div>
 </div>
 
 <!-- OBS URL guide -->
@@ -367,8 +400,67 @@
   }
   buildUrlTable();
 
+  // ── Clock settings ─────────────────────────────────────────────
+  function populateTimerList(timers) {
+    const sel = document.getElementById('timer-select');
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">— default (active timer) —</option>';
+    (timers || []).forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id || t._id || '';
+      opt.textContent = (t.name || t.id || 'Timer') +
+        (t.duration ? ' (' + Math.round(t.duration / 60000) + ' min)' : '');
+      sel.appendChild(opt);
+    });
+    sel.value = current;
+  }
+
+  function applyClockSettingsUI(ts) {
+    if (!ts) return;
+    const sel = document.getElementById('timer-select');
+    if (sel && ts.timerId !== undefined) sel.value = ts.timerId;
+    const msChk = document.getElementById('ms-toggle');
+    if (msChk && ts.showMs !== undefined) msChk.checked = !!ts.showMs;
+  }
+
+  document.getElementById('btn-save-clock').addEventListener('click', () => {
+    const timerId = document.getElementById('timer-select').value;
+    const showMs  = document.getElementById('ms-toggle').checked;
+    const msg     = document.getElementById('clock-msg');
+    msg.textContent = 'applying…';
+    fetch('/api/timer/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ timerId, showMs }),
+    })
+      .then(r => r.json())
+      .then(d => {
+        updateStatus(true);
+        msg.textContent = d.ok ? 'Saved ✓' : ('Error: ' + (d.error || 'unknown'));
+      })
+      .catch(err => { updateStatus(false); msg.textContent = 'Error: ' + err.message; });
+    setTimeout(() => { msg.textContent = ''; }, 3000);
+  });
+
   // ── Init from server ───────────────────────────────────────────
   if (IS_SERVED) {
+    fetch('/api/timer/config')
+      .then(r => r.json())
+      .then(d => {
+        updateStatus(true);
+        if (d.configured) {
+          document.getElementById('clock-section').style.display = '';
+          if (d.timerSettings) applyClockSettingsUI(d.timerSettings);
+          // Load timer list for the dropdown
+          fetch('/api/timer/list')
+            .then(r => r.json())
+            .then(tl => { if (tl.ok) { populateTimerList(tl.timers); applyClockSettingsUI(d.timerSettings); } })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
+
     fetch('/api/teams')
       .then(r => r.json())
       .then(d => {

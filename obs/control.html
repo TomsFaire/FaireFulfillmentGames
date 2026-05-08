@@ -29,8 +29,7 @@
   .status-pill.offline { background:#3a1a1a; color:#cf6e6e; }
 
   /* Timer section */
-  .timer-section { background:#2b2622; border-radius:8px; padding:12px 14px;
-                   display:flex; flex-direction:column; gap:10px; }
+  .timer-section { background:#2b2622; border-radius:8px; padding:12px 14px; }
   .timer-label   { font-size:10px; letter-spacing:.2em; color:var(--kraft); }
   .timer-btns    { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
   .timer-btns button {
@@ -46,31 +45,6 @@
   .timer-msg  { font-size:11px; opacity:.5; min-height:16px; }
   .timer-unconfigured { font-size:12px; color:var(--kraft); opacity:.6; font-style:italic; }
 
-  /* Timer settings */
-  .timer-settings { border-top:1px solid rgba(201,165,116,0.15); padding-top:10px;
-                    display:flex; flex-direction:column; gap:8px; }
-  .timer-settings-label { font-size:9px; letter-spacing:.2em; color:var(--kraft); opacity:.6; }
-  .ts-row { display:flex; align-items:center; gap:10px; }
-  .ts-row label { font-size:12px; opacity:.7; flex-shrink:0; }
-  .ts-row select {
-    flex:1; padding:7px 10px; border:1px solid var(--kraft-deep);
-    border-radius:4px; background:#1a1816; color:var(--cream);
-    font-family:var(--mono); font-size:12px; appearance:none;
-  }
-  .ts-row select:focus { outline:none; border-color:var(--kraft); }
-  .ts-toggle {
-    display:flex; align-items:center; gap:8px; font-size:12px; opacity:.7;
-    cursor:pointer; user-select:none;
-  }
-  .ts-toggle input[type=checkbox] { accent-color:var(--kraft); width:16px; height:16px; cursor:pointer; }
-  .btn-ts-apply {
-    background:#3a3632; color:var(--kraft); border:1px solid var(--kraft-deep);
-    border-radius:5px; padding:8px 14px; font-family:var(--mono);
-    font-size:11px; letter-spacing:.15em; font-weight:700; cursor:pointer;
-    touch-action:manipulation; align-self:flex-end;
-  }
-  .btn-ts-apply:active { opacity:.7; }
-  .ts-msg { font-size:11px; opacity:.5; min-height:14px; }
 
   /* Team rows */
   .team-row {
@@ -128,23 +102,6 @@
     <button class="btn-treset">↺ RESET</button>
   </div>
   <div class="timer-msg" id="timer-msg"></div>
-
-  <!-- Timer settings — timer selector + ms toggle -->
-  <div class="timer-settings" id="timer-settings">
-    <div class="timer-settings-label">TIMER SETTINGS</div>
-    <div class="ts-row">
-      <label for="timer-select">Timer</label>
-      <select id="timer-select">
-        <option value="">— default (active timer) —</option>
-      </select>
-    </div>
-    <label class="ts-toggle">
-      <input type="checkbox" id="ms-toggle" />
-      Show milliseconds (tenths)
-    </label>
-    <button class="btn-ts-apply" id="btn-ts-apply">APPLY</button>
-    <div class="ts-msg" id="ts-msg"></div>
-  </div>
 </div>
 
 <div id="teams"></div>
@@ -280,58 +237,10 @@
   document.getElementById('timer-section').addEventListener('click', e => {
     const btn = e.target.closest('button');
     if (!btn) return;
-    if (btn.classList.contains('btn-start'))   timerAction('start');
-    if (btn.classList.contains('btn-stop'))    timerAction('stop');
-    if (btn.classList.contains('btn-treset'))  timerAction('reset');
-    if (btn.classList.contains('btn-ts-apply')) applyTimerSettings();
+    if (btn.classList.contains('btn-start'))  timerAction('start');
+    if (btn.classList.contains('btn-stop'))   timerAction('stop');
+    if (btn.classList.contains('btn-treset')) timerAction('reset');
   });
-
-  // ── Timer settings ─────────────────────────────────────────
-  function applyTimerSettings() {
-    const timerId = document.getElementById('timer-select').value;
-    const showMs  = document.getElementById('ms-toggle').checked;
-    const tsMsg   = document.getElementById('ts-msg');
-    tsMsg.textContent = 'applying…';
-    fetch('/api/timer/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ timerId, showMs }),
-    })
-      .then(r => r.json())
-      .then(d => { tsMsg.textContent = d.ok ? 'Applied ✓' : ('Error: ' + (d.error || 'unknown')); })
-      .catch(err => { tsMsg.textContent = 'Error: ' + err.message; });
-    setTimeout(() => { tsMsg.textContent = ''; }, 3000);
-  }
-
-  function applyTimerSettingsUI(ts) {
-    if (!ts) return;
-    const sel = document.getElementById('timer-select');
-    if (sel && ts.timerId !== undefined) sel.value = ts.timerId;
-    const msChk = document.getElementById('ms-toggle');
-    if (msChk && ts.showMs !== undefined) msChk.checked = !!ts.showMs;
-  }
-
-  function populateTimerList(timers) {
-    const sel = document.getElementById('timer-select');
-    if (!sel) return;
-    const current = sel.value;
-    // Keep default option, replace the rest
-    sel.innerHTML = '<option value="">— default (active timer) —</option>';
-    (timers || []).forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t.id || t._id || '';
-      opt.textContent = (t.name || t.id || 'Timer') + (t.duration ? ` (${Math.round(t.duration/60000)} min)` : '');
-      sel.appendChild(opt);
-    });
-    sel.value = current; // restore selection if it still exists
-  }
-
-  function loadTimerList() {
-    fetch('/api/timer/list')
-      .then(r => r.json())
-      .then(d => { if (d.ok && Array.isArray(d.timers)) populateTimerList(d.timers); })
-      .catch(() => {});
-  }
 
   // ── Init ───────────────────────────────────────────────────
   render();
@@ -362,18 +271,14 @@
         }
         if (Array.isArray(cfg.teams)) applyTeams(cfg.teams);
         else render();
-        if (cfg.timerSettings) applyTimerSettingsUI(cfg.timerSettings);
         const sec = document.getElementById('timer-section');
         sec.style.display = '';
         if (!cfg.configured) {
           document.getElementById('timer-btns').style.display = 'none';
-          document.getElementById('timer-settings').style.display = 'none';
           const msg = document.createElement('div');
           msg.className = 'timer-unconfigured';
           msg.textContent = 'Timer not configured — add credentials to obs/.env';
           sec.appendChild(msg);
-        } else {
-          loadTimerList();
         }
       })
       .catch(() => { /* server not running — leave status OFFLINE, timer hidden */ });
@@ -395,8 +300,6 @@
             }
           } else if (msg.type === 'ffg.teams') {
             applyTeams(msg.teams);
-          } else if (msg.type === 'ffg.timer.settings') {
-            applyTimerSettingsUI(msg.timerSettings);
           }
         } catch {}
       };
