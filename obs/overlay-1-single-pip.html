@@ -137,9 +137,12 @@
       }
 
       function applyAny(msg) {
-        if (msg && msg.type === 'ffg.teams') {
+        if (!msg) return;
+        if (msg.type === 'ffg.teams') {
           try { localStorage.setItem('ffg.teams', JSON.stringify(msg.teams)); } catch (_) {}
           location.reload();
+        } else if (msg.type === 'ffg.timer.settings') {
+          Stagetimer.updateSettings(msg.timerSettings || {});
         } else {
           applyMsg(msg);
         }

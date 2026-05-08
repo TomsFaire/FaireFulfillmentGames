@@ -154,9 +154,12 @@
         render();
       }
       function applyAny(msg) {
-        if (msg && msg.type === 'ffg.teams') {
+        if (!msg) return;
+        if (msg.type === 'ffg.teams') {
           try { localStorage.setItem('ffg.teams', JSON.stringify(msg.teams)); } catch (_) {}
           location.reload();
+        } else if (msg.type === 'ffg.timer.settings') {
+          Stagetimer.updateSettings(msg.timerSettings || {});
         } else {
           applyMsg(msg);
         }
@@ -170,18 +173,7 @@
       // SSE relay from server.js (active when served via localhost:3000)
       if (location.protocol !== 'file:') try {
         const es = new EventSource('/api/events');
-        es.onmessage = (e) => {
-          try {
-            const msg = JSON.parse(e.data);
-            if (msg.type === 'ffg.teams') {
-              // Team names changed — update localStorage and reload so frame labels refresh
-              try { localStorage.setItem('ffg.teams', JSON.stringify(msg.teams)); } catch (_) {}
-              location.reload();
-            } else {
-              applyMsg(msg);
-            }
-          } catch (_) {}
-        };
+        es.onmessage = (e) => { try { applyAny(JSON.parse(e.data)); } catch (_) {} };
       } catch (e) {}
 
       // Expose for in-page console / Companion "Browser Source → execute JS"

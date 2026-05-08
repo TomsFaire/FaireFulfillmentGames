@@ -64,16 +64,17 @@ function broadcast(msg) {
   });
 }
 
-// ── Stagetimer proxy helper ───────────────────────────────────
-// Stagetimer control API uses GET: /v1/{action}?room_id=...&api_key=...
-function stagetimerPost(action, callback) {
-  const { STAGETIMER_ROOM_ID, STAGETIMER_API_KEY } = ENV;
-  if (!STAGETIMER_ROOM_ID || !STAGETIMER_API_KEY) {
-    return callback(new Error('timer not configured'));
-  }
-  const stPath = `/v1/${action}?room_id=${encodeURIComponent(STAGETIMER_ROOM_ID)}&api_key=${encodeURIComponent(STAGETIMER_API_KEY)}`;
+// ── Timer settings (persist in memory; not written to .env) ──
+let timerSettings = {
+  timerId: ENV.STAGETIMER_TIMER_ID || '',
+  showMs:  false,
+};
+
+// ── Stagetimer proxy helpers ──────────────────────────────────
+// Control API uses GET: /v1/{action}?room_id=...&api_key=...
+function stagetimerGet(path, callback) {
   const req = https.request(
-    { hostname: 'api.stagetimer.io', path: stPath, method: 'GET' },
+    { hostname: 'api.stagetimer.io', path, method: 'GET' },
     (res) => {
       let body = '';
       res.on('data', d => (body += d));
@@ -82,6 +83,15 @@ function stagetimerPost(action, callback) {
   );
   req.on('error', callback);
   req.end();
+}
+
+function stagetimerPost(action, callback) {
+  const { STAGETIMER_ROOM_ID, STAGETIMER_API_KEY } = ENV;
+  if (!STAGETIMER_ROOM_ID || !STAGETIMER_API_KEY) {
+    return callback(new Error('timer not configured'));
+  }
+  const stPath = `/v1/${action}?room_id=${encodeURIComponent(STAGETIMER_ROOM_ID)}&api_key=${encodeURIComponent(STAGETIMER_API_KEY)}`;
+  stagetimerGet(stPath, callback);
 }
 
 // ── HTTP server ───────────────────────────────────────────────
@@ -103,6 +113,7 @@ const server = http.createServer((req, res) => {
     res.write(`data: ${JSON.stringify({ type: 'ffg.orders.state', state: state.slice(), max: maxOrders })}\n\n`);
     res.write(`data: ${JSON.stringify({ type: 'ffg.teams', teams })}\n\n`);
     res.write(`data: ${JSON.stringify({ type: 'ffg.h2h', h2h })}\n\n`);
+    res.write(`data: ${JSON.stringify({ type: 'ffg.timer.settings', timerSettings })}\n\n`);
     const ping = setInterval(() => {
       try { res.write(': ping\n\n'); } catch {
         clearInterval(ping);
@@ -121,11 +132,12 @@ const server = http.createServer((req, res) => {
     const configured = !!(ENV.STAGETIMER_ROOM_ID && ENV.STAGETIMER_TIMER_ID && ENV.STAGETIMER_API_KEY);
     return json(res, 200, {
       ok: true, configured,
-      roomId: ENV.STAGETIMER_ROOM_ID  || '',
-      apiKey: ENV.STAGETIMER_API_KEY  || '',
-      timerId: ENV.STAGETIMER_TIMER_ID || '',
+      roomId:  ENV.STAGETIMER_ROOM_ID  || '',
+      apiKey:  ENV.STAGETIMER_API_KEY  || '',
+      timerId: timerSettings.timerId,
       state: state.slice(), max: maxOrders,
       teams, h2h,
+      timerSettings,
     });
   }
 
@@ -173,7 +185,41 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // ── Timer proxy ──────────────────────────────────────────────
+  // ── Timer list (proxy Stagetimer room timers) ────────────────
+  if (req.method === 'GET' && url.pathname === '/api/timer/list') {
+    const { STAGETIMER_ROOM_ID, STAGETIMER_API_KEY } = ENV;
+    if (!STAGETIMER_ROOM_ID || !STAGETIMER_API_KEY) {
+      return json(res, 200, { ok: true, timers: [], configured: false });
+    }
+    const stPath = `/v1/rooms/${encodeURIComponent(STAGETIMER_ROOM_ID)}/timers?api_key=${encodeURIComponent(STAGETIMER_API_KEY)}`;
+    stagetimerGet(stPath, (err, status, body) => {
+      if (err) return json(res, 503, { ok: false, error: err.message });
+      try {
+        const parsed = JSON.parse(body);
+        json(res, 200, { ok: true, timers: parsed.data || parsed.timers || [] });
+      } catch {
+        json(res, 502, { ok: false, error: 'bad upstream response' });
+      }
+    });
+    return;
+  }
+
+  // ── Timer settings (timerId + showMs) ────────────────────────
+  if (req.method === 'POST' && url.pathname === '/api/timer/settings') {
+    let raw = '';
+    req.on('data', d => { raw += d; if (raw.length > 4096) req.socket.destroy(); });
+    req.on('end', () => {
+      let data = {};
+      try { data = JSON.parse(raw); } catch { /* ignore */ }
+      if (typeof data.timerId === 'string') timerSettings.timerId = data.timerId.trim().slice(0, 128);
+      if (typeof data.showMs  === 'boolean') timerSettings.showMs = data.showMs;
+      broadcast({ type: 'ffg.timer.settings', timerSettings });
+      json(res, 200, { ok: true, timerSettings });
+    });
+    return;
+  }
+
+  // ── Timer control (start / stop / reset) ─────────────────────
   if (req.method === 'POST' && url.pathname.startsWith('/api/timer/')) {
     const action = url.pathname.split('/').pop();
     if (!['start', 'stop', 'reset'].includes(action)) {

@@ -203,13 +203,16 @@
       }
 
       function applyAny(msg) {
-        if (msg && (msg.type === 'ffg.teams' || msg.type === 'ffg.h2h')) {
+        if (!msg) return;
+        if (msg.type === 'ffg.teams' || msg.type === 'ffg.h2h') {
           // Team names or H2H assignments changed — update localStorage and reload
           if (msg.type === 'ffg.teams')
             try { localStorage.setItem('ffg.teams', JSON.stringify(msg.teams)); } catch (_) {}
           if (msg.type === 'ffg.h2h')
             try { localStorage.setItem('ffg.h2h', JSON.stringify(msg.h2h)); } catch (_) {}
           location.reload();
+        } else if (msg.type === 'ffg.timer.settings') {
+          Stagetimer.updateSettings(msg.timerSettings || {});
         } else {
           applyMsg(msg);
         }
