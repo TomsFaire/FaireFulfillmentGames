@@ -34,7 +34,7 @@ OBS-ready browser-source overlays for the four-team fulfillment livestream. Card
     └── stagetimer.js                        ← Live SHIP-BY clock binding
 ```
 
-The single source of truth for **team names, cities, codes, handles** is the `TEAMS` constant at the top of `obs/overlay-kit.js`. Edit it there and all three overlays update.
+The single source of truth for **team names, cities, codes, handles** is the `TEAMS` constant at the top of `obs/overlay-kit.js`. Edit it there and all overlays update.
 
 ---
 
@@ -199,12 +199,18 @@ End-of-show winner reveal. Mimics the single-cam layout so the transition feels 
 - **1st-place Faire postage badge** — rotated stamp in the upper-left of the cam window
 - **DELIVERED** — large diagonal rubber stamp over the lower portion of the cam feed
 
+**No SHIP-BY timer chip** — Overlay 5 shows the final score only, not the clock.
+
+### Score
+
+The final score chip shows the winner's live order count from the **same shared store as overlays 3 and 4** — the tablet controller in `control.html` drives it. No separate configuration needed; if the score is right on Overlay 3, it's right here too.
+
 ### Winner selection
 
 | URL param | Default | Description |
 |---|---|---|
 | `?winner=` | `tor` | Winning team key (`sf`, `kw`, `tor`, `nyc`) |
-| `?final=` | same as `max` | Final score to display in the kicker chip |
+| `?final=` | *(live score)* | Optional: seed the winner's score to a specific number on load |
 | `?max=` | `10` | Target / denominator |
 
 ### Preset files
@@ -251,9 +257,13 @@ Polls every ~1s with drift correction. Status pill on the chip shows `OFFLINE` /
 
 ---
 
-## Order counters (overlay 3)
+## Score counters (overlays 3, 4, and 5)
 
-The `ORDERS  N / 10` chip on each of the four cells is fully controllable, three ways. Pick the one that fits your control surface.
+All three score-bearing overlays share a single source of truth: `localStorage['ffg.orders']` — a four-element array `[sf, kw, tor, nyc]`. Update it in one place and every open overlay reflects it instantly.
+
+- **Overlay 3** — shows all four teams' order counts as large chips in a 2×2 grid
+- **Overlay 4** — shows the two competing teams' counts as pills in the header banner
+- **Overlay 5** — shows the winner's final count in the kicker chip
 
 ### Team keys
 
@@ -270,23 +280,25 @@ Counter values persist in `localStorage` — a Companion "refresh page" button d
 
 Start `obs/server.js` on the OBS machine (see Score controller setup above), then open `http://<obs-machine-ip>:3000/control.html` on any tablet or phone on the same WiFi. Big +/− buttons per team, RESET ALL, Goal field, and SHIP-BY timer controls.
 
-Score changes flow: tablet → `POST /api/orders/bump` → server → SSE → OBS overlay. No page refresh needed. The status pill shows **LIVE** when the server is reachable.
+Score changes flow: tablet → `POST /api/orders/bump` → server → SSE → all open overlays simultaneously. No page refresh needed. The status pill shows **LIVE** when the server is reachable.
 
 Falls back to **BroadcastChannel** if the server is unreachable and both pages happen to be in the same browser on the same machine.
 
-### Method 2 — Companion HTTP GET (Generic HTTP module)
+### Method 2 — URL params + page reload (Companion HTTP GET)
 
-Set the URL with explicit values and refresh the browser source.
+Seed scores via URL params and trigger an OBS "Refresh browser source" action:
 
 ```
-http://your-host/obs/overlay-3-four-up.html?obs=1&sf=8&kw=6&tor=9&nyc=7
+http://localhost:3000/overlay-3-four-up.html?obs=1&sf=8&kw=6&tor=9&nyc=7
+http://localhost:3000/overlay-4-head-to-head.html?obs=1&sf=8&nyc=6
+http://localhost:3000/overlay-5-champion.html?obs=1&winner=sf&final=10
 ```
 
-Optional `&max=12` to change the denominator. Pair with an OBS "Refresh browser source" action right after.
+Optional `&max=12` to change the denominator. Use with an OBS "Refresh browser source" action.
 
 ### Method 3 — Companion → OBS "Execute JavaScript on browser source" (cleanest, no reload)
 
-Each Companion button fires one JS expression on the browser source:
+Each Companion button fires one JS expression on the browser source. Works on overlays 3, 4, and 5 — `window.FFG` is exposed on all of them:
 
 ```js
 FFG.bump('sf', 1)      // +1 for Team SF
@@ -296,8 +308,6 @@ FFG.set('tor', 0)      // zero Team TOR
 FFG.reset()            // zero everything
 FFG.state()            // returns current state, e.g. [7,5,8,6]
 ```
-
-This is what we'd recommend for a live show: one row of buttons per team for +/−, plus a RESET in a corner.
 
 ### Method 4 — postMessage (for embedding in another page)
 
@@ -332,7 +342,7 @@ window.TEAMS = [
 
 ### Change the show name / banner copy
 
-Per overlay — search for "FAIRE FULFILLMENT GAMES" in `obs/overlay-1-…html`, `overlay-2-…html`, `overlay-3-…html`.
+Per overlay — search for "FAIRE FULFILLMENT GAMES" or "FFG 2026" in the relevant HTML file under `obs/`.
 
 ### Change the SHIP-BY label
 
