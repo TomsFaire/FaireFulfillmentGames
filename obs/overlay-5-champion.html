@@ -120,8 +120,12 @@
       const TEAMS = window.TEAMS;
 
       const params = new URLSearchParams(location.search);
-      // ?winner= accepts a numeric index 0-3 (default 2)
-      const winnerIdx = Math.max(0, Math.min(3, +(params.get('winner') ?? 2)));
+      // ?winner= accepts a numeric index 0-3 OR a city code (sf/kw/tor/nyc)
+      const KEYS = TEAMS.map(t => t.code);
+      const winnerRaw = (params.get('winner') || '0').toLowerCase();
+      const winnerIdx = /^\d+$/.test(winnerRaw)
+        ? Math.min(3, Math.max(0, +winnerRaw))
+        : Math.max(0, KEYS.indexOf(winnerRaw));
       const winner = TEAMS[winnerIdx];
 
       const max = +(params.get('max') ?? 10);
