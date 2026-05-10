@@ -295,7 +295,7 @@ window.FFGLoadH2H  = ffgLoadH2H;
 
     const layer = document.createElement('div');
     layer.className = 'obs-bg-layer';
-    layer.style.clipPath = `path(evenodd, '${outer} ${holePaths}')`;
+    layer.style.clipPath = `path('${outer} ${holePaths}')`;
 
     addObsDecorations(layer);
 
@@ -304,11 +304,11 @@ window.FFGLoadH2H  = ffgLoadH2H;
   }
 
   const _CORE_VALUES = [
-    { file: 'One_Faire_color.png',              label: 'One Faire' },
-    { file: 'Make_it_happen_(fast)_color.png',  label: 'Make It Happen (Fast)' },
-    { file: 'Seek_the_truth_color.png',         label: 'Seek the Truth' },
-    { file: 'Raise_the_bar_color.png',          label: 'Raise the Bar' },
-    { file: 'Serve_our_community_color.png',    label: 'Serve Our Community' },
+    { file: 'one-faire.gif',            label: 'One Faire' },
+    { file: 'make-it-happen-fast.gif',  label: 'Make It Happen (Fast)' },
+    { file: 'seek-the-truth.gif',       label: 'Seek the Truth' },
+    { file: 'raise-the-bar.gif',        label: 'Raise the Bar' },
+    { file: 'serve-our-community.gif',  label: 'Serve Our Community' },
   ];
 
   // Sticker positions chosen to fall in the safe zones that are never

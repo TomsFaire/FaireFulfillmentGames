@@ -27,7 +27,21 @@ const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js':   'application/javascript; charset=utf-8',
   '.css':  'text/css; charset=utf-8',
+  '.png':  'image/png',
+  '.jpg':  'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif':  'image/gif',
+  '.svg':  'image/svg+xml',
+  '.webp': 'image/webp',
 };
+
+// Safely read a POST body. Calls cb(raw) on success, silently drops on error.
+function readBody(req, maxLen, cb) {
+  let raw = '';
+  req.on('data', d => { raw += d; if (raw.length > maxLen) req.socket.destroy(); });
+  req.on('end', () => cb(raw));
+  req.on('error', () => {}); // prevent unhandled 'error' crash on connection drop
+}
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -72,15 +86,16 @@ let timerSettings = {
 
 // ── Stagetimer proxy helpers ──────────────────────────────────
 // Control API uses GET: /v1/{action}?room_id=...&api_key=...
-function stagetimerGet(path, callback) {
+function stagetimerGet(stPath, callback) {
   const req = https.request(
-    { hostname: 'api.stagetimer.io', path, method: 'GET' },
+    { hostname: 'api.stagetimer.io', path: stPath, method: 'GET' },
     (res) => {
       let body = '';
       res.on('data', d => (body += d));
       res.on('end', () => callback(null, res.statusCode, body));
     }
   );
+  req.setTimeout(10000, () => { req.destroy(new Error('stagetimer timeout')); });
   req.on('error', callback);
   req.end();
 }
@@ -150,9 +165,7 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === 'POST' && url.pathname === '/api/teams') {
-    let raw = '';
-    req.on('data', d => { raw += d; if (raw.length > 65536) req.socket.destroy(); });
-    req.on('end', () => {
+    readBody(req, 65536, raw => {
       let data = {};
       try { data = JSON.parse(raw); } catch { /* ignore */ }
       if (Array.isArray(data.teams) && data.teams.length === 4) {
@@ -170,9 +183,7 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === 'POST' && url.pathname === '/api/h2h') {
-    let raw = '';
-    req.on('data', d => { raw += d; if (raw.length > 65536) req.socket.destroy(); });
-    req.on('end', () => {
+    readBody(req, 65536, raw => {
       let data = {};
       try { data = JSON.parse(raw); } catch { /* ignore */ }
       if (data.h2h && data.h2h.a && data.h2h.b) {
@@ -209,9 +220,7 @@ const server = http.createServer((req, res) => {
 
   // ── Timer settings (timerId + showMs) ────────────────────────
   if (req.method === 'POST' && url.pathname === '/api/timer/settings') {
-    let raw = '';
-    req.on('data', d => { raw += d; if (raw.length > 4096) req.socket.destroy(); });
-    req.on('end', () => {
+    readBody(req, 4096, raw => {
       let data = {};
       try { data = JSON.parse(raw); } catch { /* ignore */ }
       if (typeof data.timerId === 'string') timerSettings.timerId = data.timerId.trim().slice(0, 128);
@@ -249,12 +258,7 @@ const server = http.createServer((req, res) => {
 
   // ── Orders API ───────────────────────────────────────────────
   if (req.method === 'POST' && url.pathname.startsWith('/api/orders/')) {
-    let raw = '';
-    req.on('data', d => {
-      raw += d;
-      if (raw.length > 65536) { req.socket.destroy(); }
-    });
-    req.on('end', () => {
+    readBody(req, 65536, raw => {
       let data = {};
       try { data = JSON.parse(raw); } catch { /* ignore */ }
       const action = url.pathname.split('/').pop();
@@ -288,7 +292,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // ── Static files ─────────────────────────────────────────────
+  // ── Static files ──────────────────────────────────────────────
   if (req.method === 'GET') {
     const rel     = url.pathname === '/' ? '/control.html' : url.pathname;
     const absPath = path.join(DIR, rel);
@@ -308,9 +312,14 @@ const server = http.createServer((req, res) => {
   res.writeHead(405); res.end('Method not allowed');
 });
 
+server.on('error', err => console.error('[server error]', err.message));
+
 server.listen(PORT, () => {
   const configured = !!(ENV.STAGETIMER_ROOM_ID && ENV.STAGETIMER_API_KEY);
   console.log(`FFG server  →  http://localhost:${PORT}`);
   console.log(`Tablet URL  →  http://<this-machine-ip>:${PORT}/control.html`);
   console.log(`Stagetimer  →  ${configured ? 'configured ✓' : 'NOT configured (add obs/.env)'}`);
 });
+
+process.on('uncaughtException',   err => console.error('[uncaught]', err));
+process.on('unhandledRejection',  err => console.error('[unhandled rejection]', err));
